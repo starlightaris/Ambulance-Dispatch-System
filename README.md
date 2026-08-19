@@ -4,9 +4,7 @@
 com.ambulance.dispatch_system
 ├── common/
 │   ├── entity/
-│   │   └── Hospital.java
 │   └── repository/
-│       └── HospitalRepository.java
 ├── routing/            (Task 1)
 │   ├── entity/
 │   ├── repository/
@@ -19,7 +17,7 @@ com.ambulance.dispatch_system
 │   └── controller/
 ├── network/            (Task 3)
 ├── triage/             (Task 4)
-├── scheduling/         (Task 5)
+├── optimization/       (Task 5 — scheduling: fitness/, ga/, greedy/, model/)
 └── DispatchSystemApplication.java
 ```
 
