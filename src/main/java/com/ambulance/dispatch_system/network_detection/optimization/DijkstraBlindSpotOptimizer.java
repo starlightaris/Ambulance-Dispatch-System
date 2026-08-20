@@ -9,10 +9,16 @@ import java.util.*;
 @Component
 public class DijkstraBlindSpotOptimizer {
 
-    public List<RoadNode> computeBlindSpots(List<RoadNode> allNodes, List<RoadEdge> allEdges, double thresholdMinutes) {
+    public List<RoadNode> computeBlindSpots(List<RoadNode> allNodes,
+                                            List<RoadEdge> allEdges,
+                                            Set<String> baseNodeNames,
+                                            double thresholdMinutes) {
+        if (allNodes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         Map<Long, List<RoadEdge>> adjList = new HashMap<>();
         for (RoadEdge edge : allEdges) {
-            // Skip blocked roads
             if (!edge.isBlocked() && edge.getFromNode() != null) {
                 adjList.computeIfAbsent(edge.getFromNode().getId(), k -> new ArrayList<>()).add(edge);
             }
@@ -25,12 +31,21 @@ public class DijkstraBlindSpotOptimizer {
 
         PriorityQueue<NodeDistancePair> pq = new PriorityQueue<>(Comparator.comparingDouble(p -> p.distance));
 
+        boolean foundExplicitBase = false;
         for (RoadNode node : allNodes) {
-            // Check if the node is an ambulance base/station by name
-            if (isAmbulanceBase(node)) {
+            boolean isBase = baseNodeNames != null && baseNodeNames.contains(node.getName());
+
+            if (isBase) {
+                foundExplicitBase = true;
                 minTravelTimes.put(node.getId(), 0.0);
                 pq.add(new NodeDistancePair(node.getId(), 0.0));
             }
+        }
+
+        if (!foundExplicitBase && !allNodes.isEmpty()) {
+            RoadNode fallback = allNodes.get(0);
+            minTravelTimes.put(fallback.getId(), 0.0);
+            pq.add(new NodeDistancePair(fallback.getId(), 0.0));
         }
 
         while (!pq.isEmpty()) {
@@ -39,10 +54,8 @@ public class DijkstraBlindSpotOptimizer {
 
             for (RoadEdge edge : adjList.getOrDefault(curr.nodeId, Collections.emptyList())) {
                 double newDist = curr.distance + edge.getTravelTimeMinutes();
-
                 if (edge.getToNode() != null) {
                     Long neighborId = edge.getToNode().getId();
-
                     if (newDist < minTravelTimes.getOrDefault(neighborId, Double.MAX_VALUE)) {
                         minTravelTimes.put(neighborId, newDist);
                         pq.add(new NodeDistancePair(neighborId, newDist));
@@ -53,18 +66,13 @@ public class DijkstraBlindSpotOptimizer {
 
         List<RoadNode> blindSpots = new ArrayList<>();
         for (RoadNode node : allNodes) {
-            if (minTravelTimes.get(node.getId()) > thresholdMinutes) {
+            Double time = minTravelTimes.get(node.getId());
+            if (time == null || time > thresholdMinutes) {
                 blindSpots.add(node);
             }
         }
 
         return blindSpots;
-    }
-
-    private boolean isAmbulanceBase(RoadNode node) {
-        if (node.getName() == null) return false;
-        String name = node.getName().toLowerCase();
-        return name.contains("base") || name.contains("station") || name.contains("hospital") || name.contains("depot");
     }
 
     private record NodeDistancePair(Long nodeId, double distance) {}
