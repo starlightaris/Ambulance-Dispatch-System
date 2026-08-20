@@ -1,6 +1,11 @@
 package com.ambulance.dispatch_system.common.entity;
 
 import com.ambulance.dispatch_system.common.entity.enums.CallStatus;
+import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.FetchType;
+import java.util.HashSet;
+import java.util.Set;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -40,6 +45,19 @@ public class Call {
 
     @ManyToOne
     private Hospital destinationHospital;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+        @Enumerated(EnumType.STRING)
+        private Set<MedicalEquipment> requiredEquipment = new HashSet<>();
+
+
+        public Set<MedicalEquipment> getRequiredEquipment() { 
+            return requiredEquipment; 
+        }
+
+        public void setRequiredEquipment(Set<MedicalEquipment> requiredEquipment) { 
+            this.requiredEquipment = requiredEquipment; 
+        }
 
     // Getters and setters
     public Long getId() { return id; }

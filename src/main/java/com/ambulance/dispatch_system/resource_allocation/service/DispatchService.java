@@ -6,7 +6,7 @@ import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
 import com.ambulance.dispatch_system.common.entity.enums.CallStatus;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.CallRepository;
-import com.ambulance.dispatch_system.optimization.greedy.GreedyAllocatorService;
+import com.ambulance.dispatch_system.resource_allocation.optimization.GreedyScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,22 +17,22 @@ public class DispatchService {
 
     private final CallRepository callRepository;
     private final AmbulanceRepository ambulanceRepository;
-    private final GreedyAllocatorService greedyAllocator;
+    private final GreedyScheduler greedyScheduler;
 
-    public DispatchService(CallRepository callRepository, AmbulanceRepository ambulanceRepository, GreedyAllocatorService greedyAllocator) {
+    public DispatchService(CallRepository callRepository, 
+                           AmbulanceRepository ambulanceRepository, 
+                           GreedyScheduler greedyScheduler) {
         this.callRepository = callRepository;
         this.ambulanceRepository = ambulanceRepository;
-        this.greedyAllocator = greedyAllocator;
+        this.greedyScheduler = greedyScheduler;
     }
 
     @Transactional
     public String handleEmergencyDispatch(Long callId) {
-        // 1. Find the emergency call
         Call call = callRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new RuntimeException("Call not found with ID: " + callId));
 
-        // 2. Find the best ambulance using our Greedy algorithm
-        Optional<Ambulance> bestAmbulanceOpt = greedyAllocator.allocateBestAmbulance(
+        Optional<Ambulance> bestAmbulanceOpt = greedyScheduler.findBestAmbulance(
                 call.getLocationNode(), 
                 call.getRequiredEquipment()
         );
@@ -41,15 +41,14 @@ public class DispatchService {
             return "No suitable ambulance available at this time.";
         }
 
-        // 3. Assign and update statuses
         Ambulance bestAmbulance = bestAmbulanceOpt.get();
         
         call.setAssignedAmbulance(bestAmbulance);
-        call.setStatus(CallStatus.DISPATCHED); // Assuming you have this status
+        call.setStatus(CallStatus.DISPATCHED); 
         
-        bestAmbulance.setStatus(AmbulanceStatus.BUSY); // Assuming you have this status
+        // Updated to use your new enum value
+        bestAmbulance.setStatus(AmbulanceStatus.DISPATCHED);
 
-        // 4. Save changes to database
         ambulanceRepository.save(bestAmbulance);
         callRepository.save(call);
 
