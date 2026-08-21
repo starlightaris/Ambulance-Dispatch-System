@@ -8,6 +8,7 @@ import com.ambulance.dispatch_system.triage.service.impl.algorithms.KNNClassifie
 import com.ambulance.dispatch_system.triage.service.impl.algorithms.MTSDecisionTree;
 import com.ambulance.dispatch_system.triage.service.impl.algorithms.WeightedScoringStrategy;
 import com.ambulance.dispatch_system.triage.util.PriorityDispatchQueue;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileWriter;
@@ -44,7 +45,11 @@ public class TriageBenchmarkTest {
     private static final int[] N_VALUES = {100, 1000, 10000, 100000};
     private static final int QUERIES = 1000;
 
+    // Disabled by default: N scales to 100,000 with 1,000 queries per N against the O(N)
+    // KNN baseline, which takes several minutes. Remove @Disabled to regenerate the
+    // report's benchmark-results.csv / complexity-validation.csv locally on demand.
     @Test
+    @Disabled("Long-running benchmark; run manually to regenerate report data")
     public void runBenchmarks() throws IOException {
         System.out.println("Starting Benchmarks...");
         
