@@ -101,6 +101,24 @@ class PriorityDispatchQueueTest {
     }
     
     @Test
+    void testGetRankOrderingCorrectness() {
+        // GREEN patient with high tiebreaker inserted first
+        TriageAssessment green = createAssessment(TriageCategory.GREEN, 99.0, LocalDateTime.now().minusMinutes(10));
+        green.setSeverityRank(TriageCategory.GREEN.getSeverity());
+        
+        // RED patient with low tiebreaker inserted second
+        TriageAssessment red = createAssessment(TriageCategory.RED, 1.0, LocalDateTime.now());
+        red.setSeverityRank(TriageCategory.RED.getSeverity());
+        
+        queue.insert(green);
+        queue.insert(red);
+        
+        // RED patient should get rank 1 (better) despite lower score and later arrival, because severityRank dominates
+        assertEquals(1, queue.getRank(red));
+        assertEquals(2, queue.getRank(green));
+    }
+    
+    @Test
     void testRemove() {
         TriageAssessment a1 = createAssessment(TriageCategory.RED, 15.0, LocalDateTime.now());
         TriageAssessment a2 = createAssessment(TriageCategory.YELLOW, 10.0, LocalDateTime.now());

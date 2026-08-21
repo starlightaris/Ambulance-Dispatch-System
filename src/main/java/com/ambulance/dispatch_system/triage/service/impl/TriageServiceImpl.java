@@ -36,6 +36,7 @@ public class TriageServiceImpl implements TriageService {
 
     @PostConstruct
     public void initQueue() {
+        dispatchQueue.clear();
         // Load active unresolved assessments into the priority queue on startup
         List<TriageAssessment> activeAssessments = assessmentRepository.findActiveQueue();
         for (TriageAssessment assessment : activeAssessments) {
@@ -108,6 +109,14 @@ public class TriageServiceImpl implements TriageService {
         TriageAssessment assessment = assessmentRepository.findById(id).orElseThrow();
         assessment.setResolved(true);
         assessmentRepository.save(assessment);
+        
+        // KNOWN LIMITATION (For Report Chapter 6):
+        // The dispatchQueue is an in-memory data structure. If the transaction fails 
+        // and rolls back (e.g. during JPA flush at method exit), the database will 
+        // correctly rollback 'resolved = false', but the heap will have already 
+        // processed 'remove(id)' successfully. The heap and DB will be out of sync.
+        // A robust solution would involve a transaction synchronization callback 
+        // (TransactionSynchronizationManager) to only remove from the heap after commit.
         dispatchQueue.remove(id);
     }
 }

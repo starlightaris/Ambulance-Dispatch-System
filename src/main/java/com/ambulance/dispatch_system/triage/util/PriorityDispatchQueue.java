@@ -84,6 +84,11 @@ public class PriorityDispatchQueue {
         return size == 0;
     }
     
+    public synchronized void clear() {
+        Arrays.fill(heap, 0, size, null);
+        size = 0;
+    }
+    
     public synchronized java.util.List<TriageAssessment> getSnapshot() {
         TriageAssessment[] copy = Arrays.copyOf(heap, size);
         Arrays.sort(copy, (a, b) -> compare(b, a)); // Sort descending since compare returns > 0 if a > b
@@ -157,8 +162,10 @@ public class PriorityDispatchQueue {
      * Returns 0 if equal priority
      */
     private int compare(TriageAssessment a, TriageAssessment b) {
-        int severityA = a.getAssignedCategory() != null ? a.getAssignedCategory().getSeverity() : 0;
-        int severityB = b.getAssignedCategory() != null ? b.getAssignedCategory().getSeverity() : 0;
+        int severityA = a.getSeverityRank() != null ? a.getSeverityRank() : 
+                        (a.getAssignedCategory() != null ? a.getAssignedCategory().getSeverity() : 0);
+        int severityB = b.getSeverityRank() != null ? b.getSeverityRank() : 
+                        (b.getAssignedCategory() != null ? b.getAssignedCategory().getSeverity() : 0);
         
         if (severityA != severityB) {
             return Integer.compare(severityA, severityB);
