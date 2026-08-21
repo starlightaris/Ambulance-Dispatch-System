@@ -33,8 +33,13 @@ public class KNNClassifier {
 
     @PostConstruct
     public void initSyntheticDataset() {
+        initSyntheticDataset(SYNTHETIC_DATASET_SIZE);
+    }
+
+    public void initSyntheticDataset(int size) {
+        dataset.clear();
         Random random = new Random(42); // Seeded for reproducibility
-        for (int i = 0; i < SYNTHETIC_DATASET_SIZE; i++) {
+        for (int i = 0; i < size; i++) {
             dataset.add(generateRandomRecord(random));
         }
     }

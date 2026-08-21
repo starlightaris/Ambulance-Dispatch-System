@@ -8,7 +8,6 @@ import com.ambulance.dispatch_system.triage.service.impl.algorithms.KNNClassifie
 import com.ambulance.dispatch_system.triage.service.impl.algorithms.MTSDecisionTree;
 import com.ambulance.dispatch_system.triage.service.impl.algorithms.WeightedScoringStrategy;
 import com.ambulance.dispatch_system.triage.util.PriorityDispatchQueue;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileWriter;
@@ -16,13 +15,23 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 
 /**
  * Benchmarking suite to compare algorithms.
- * Note: Falling back to System.nanoTime() with warm-up iterations to ensure 
- * strict control over the custom CSV output format requested for the report.
+ * Note: N defines the size of the underlying data structure:
+ * - KNNClassifier: N = size of the historical dataset.
+ * - PriorityDispatchQueue: N = initial number of elements in the queue.
+ * - MTSDecisionTree: O(1) stateless evaluation, N is kept for alignment.
+ * 
+ * We measure the time taken to evaluate a FIXED number of Q incoming requests (Q = 1000)
+ * against these N-sized structures to correctly isolate the O(N*D) and O(log N) per-query costs.
+ * 
+ * JVM memory profiling via Runtime is inherently approximate. -Xms and -Xmx flags 
+ * would help stabilize GC behavior for rigorous memory testing.
  */
 public class TriageBenchmarkTest {
 
@@ -30,136 +39,207 @@ public class TriageBenchmarkTest {
     private final WeightedScoringStrategy scoringStrategy = new WeightedScoringStrategy();
     private final KNNClassifier knnClassifier = new KNNClassifier();
 
-    private static final int WARMUP_ITERATIONS = 5;
+    private static final int WARMUP_ITERATIONS = 3;
     private static final int TIMED_RUNS = 10;
     private static final int[] N_VALUES = {100, 1000, 10000, 100000};
+    private static final int QUERIES = 1000;
 
-    // Remove @Disabled to run the benchmark locally. It's disabled by default so 
-    // it doesn't slow down the regular CI/CD build unless explicitly requested.
     @Test
     public void runBenchmarks() throws IOException {
-        knnClassifier.initSyntheticDataset();
-
         System.out.println("Starting Benchmarks...");
-        System.out.printf("%-20s | %-10s | %-15s | %-15s%n", "Algorithm", "N", "Avg Time (ms)", "Memory Diff (KB)");
-        System.out.println("-".repeat(68));
+        
+        List<BenchmarkResult> results = new ArrayList<>();
 
         try (PrintWriter writer = new PrintWriter(new FileWriter("benchmark-results.csv"))) {
-            writer.println("algorithm,N,avg_time_ms,memory_delta_kb");
+            writer.println("algorithm,N,avg_time_ms,median_time_ms,stddev_time_ms,memory_delta_kb");
 
             for (int n : N_VALUES) {
-                List<TriageRequestDTO> requests = generateRequests(n);
+                System.out.println("Benchmarking N=" + n);
+                List<TriageRequestDTO> queries = generateRequests(QUERIES);
 
-                benchmarkMTS(requests, n, writer);
-                benchmarkWeightedHeap(requests, n, writer);
-                benchmarkKNN(requests, n, writer);
+                results.add(benchmarkMTS(queries, n, writer));
+                results.add(benchmarkWeightedHeap(queries, n, writer));
+                results.add(benchmarkKNN(queries, n, writer));
             }
         }
-        System.out.println("Benchmarks complete. Results saved to benchmark-results.csv");
-    }
-
-    private void benchmarkMTS(List<TriageRequestDTO> requests, int n, PrintWriter writer) {
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            for (TriageRequestDTO req : requests) {
-                mtsDecisionTree.evaluate(req);
-            }
-        }
-
-        // Measure
-        System.gc();
-        long memBefore = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-        long totalTimeNs = 0;
-
-        for (int i = 0; i < TIMED_RUNS; i++) {
-            long start = System.nanoTime();
-            for (TriageRequestDTO req : requests) {
-                mtsDecisionTree.evaluate(req);
-            }
-            totalTimeNs += (System.nanoTime() - start);
-        }
-
-        long memAfter = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
         
-        double avgTimeMs = (totalTimeNs / (double) TIMED_RUNS) / 1_000_000.0;
-        double memDiffKb = Math.max(0, (memAfter - memBefore) / 1024.0);
-
-        logResult("MTSDecisionTree", n, avgTimeMs, memDiffKb, writer);
+        System.out.println("Benchmarks complete. Results saved to benchmark-results.csv");
+        generateComplexityValidation(results);
+    }
+    
+    private void generateComplexityValidation(List<BenchmarkResult> results) throws IOException {
+        try (PrintWriter writer = new PrintWriter(new FileWriter("complexity-validation.csv"))) {
+            writer.println("algorithm,N_from,N_to,empirical_ratio,expected_ratio_O1,expected_ratio_OlogN,expected_ratio_ON");
+            System.out.println("\nComplexity Validation Check");
+            System.out.printf("%-20s | %-8s | %-8s | %-15s | %-10s | %-10s | %-10s%n", 
+                              "Algorithm", "N_from", "N_to", "Empirical", "O(1)", "O(log N)", "O(N)");
+            System.out.println("-".repeat(95));
+            
+            for (int i = 0; i < results.size(); i++) {
+                BenchmarkResult current = results.get(i);
+                BenchmarkResult prev = null;
+                for (int j = i - 1; j >= 0; j--) {
+                    if (results.get(j).algo.equals(current.algo)) {
+                        prev = results.get(j);
+                        break;
+                    }
+                }
+                
+                if (prev != null) {
+                    double empirical = current.medianTimeMs / prev.medianTimeMs;
+                    double expO1 = 1.0;
+                    double expLogN = (prev.n > 1) ? (Math.log(current.n) / Math.log(prev.n)) : 1.0;
+                    double expON = (double) current.n / prev.n;
+                    
+                    writer.printf("%s,%d,%d,%.3f,%.3f,%.3f,%.3f%n", 
+                            current.algo, prev.n, current.n, empirical, expO1, expLogN, expON);
+                    System.out.printf("%-20s | %-8d | %-8d | %-15.3f | %-10.3f | %-10.3f | %-10.3f%n",
+                            current.algo, prev.n, current.n, empirical, expO1, expLogN, expON);
+                }
+            }
+        }
+        System.out.println("Complexity validation saved to complexity-validation.csv\n");
     }
 
-    private void benchmarkWeightedHeap(List<TriageRequestDTO> requests, int n, PrintWriter writer) {
-        // Warmup
+    private BenchmarkResult benchmarkMTS(List<TriageRequestDTO> queries, int n, PrintWriter writer) {
+        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
+            for (TriageRequestDTO req : queries) mtsDecisionTree.evaluate(req);
+        }
+
+        double[] times = new double[TIMED_RUNS];
+        for (int i = 0; i < TIMED_RUNS; i++) {
+            long start = System.nanoTime();
+            for (TriageRequestDTO req : queries) mtsDecisionTree.evaluate(req);
+            times[i] = (System.nanoTime() - start) / 1_000_000.0;
+        }
+
+        double memKb = measureMemory(() -> {
+            List<TriageCategory> res = new ArrayList<>(QUERIES);
+            for (TriageRequestDTO req : queries) res.add(mtsDecisionTree.evaluate(req));
+            return res;
+        });
+
+        return logAndCreateResult("MTSDecisionTree", n, times, memKb, writer);
+    }
+
+    private BenchmarkResult benchmarkWeightedHeap(List<TriageRequestDTO> queries, int n, PrintWriter writer) {
+        List<TriageRequestDTO> prefillRequests = generateRequests(n);
+        List<TriageAssessment> prefillAssessments = new ArrayList<>(n);
+        for (TriageRequestDTO req : prefillRequests) {
+            TriageAssessment ta = new TriageAssessment();
+            ta.setTieBreakerScore(scoringStrategy.calculateScore(req));
+            ta.setAssignedCategory(TriageCategory.GREEN);
+            ta.setCreatedAt(LocalDateTime.now());
+            prefillAssessments.add(ta);
+        }
+
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
             PriorityDispatchQueue queue = new PriorityDispatchQueue();
-            for (TriageRequestDTO req : requests) {
-                double score = scoringStrategy.calculateScore(req);
+            for (TriageAssessment ta : prefillAssessments) queue.insert(ta);
+            for (TriageRequestDTO req : queries) {
                 TriageAssessment ta = new TriageAssessment();
-                ta.setTieBreakerScore(score);
+                ta.setTieBreakerScore(scoringStrategy.calculateScore(req));
                 ta.setAssignedCategory(TriageCategory.GREEN);
-                ta.setCreatedAt(LocalDateTime.now());
                 queue.insert(ta);
             }
         }
 
-        // Measure
-        System.gc();
-        long memBefore = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-        long totalTimeNs = 0;
-
+        double[] times = new double[TIMED_RUNS];
         for (int i = 0; i < TIMED_RUNS; i++) {
-            long start = System.nanoTime();
             PriorityDispatchQueue queue = new PriorityDispatchQueue();
-            for (TriageRequestDTO req : requests) {
-                double score = scoringStrategy.calculateScore(req);
+            for (TriageAssessment ta : prefillAssessments) queue.insert(ta);
+            
+            long start = System.nanoTime();
+            for (TriageRequestDTO req : queries) {
                 TriageAssessment ta = new TriageAssessment();
-                ta.setTieBreakerScore(score);
-                ta.setAssignedCategory(TriageCategory.GREEN); // Dummy for benchmarking insertion speed
-                ta.setCreatedAt(LocalDateTime.now());
+                ta.setTieBreakerScore(scoringStrategy.calculateScore(req));
+                ta.setAssignedCategory(TriageCategory.GREEN);
                 queue.insert(ta);
             }
-            totalTimeNs += (System.nanoTime() - start);
+            times[i] = (System.nanoTime() - start) / 1_000_000.0;
         }
 
-        long memAfter = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        double memKb = measureMemory(() -> {
+            PriorityDispatchQueue queue = new PriorityDispatchQueue();
+            for (TriageAssessment ta : prefillAssessments) queue.insert(ta);
+            for (TriageRequestDTO req : queries) {
+                TriageAssessment ta = new TriageAssessment();
+                ta.setTieBreakerScore(scoringStrategy.calculateScore(req));
+                ta.setAssignedCategory(TriageCategory.GREEN);
+                queue.insert(ta);
+            }
+            return queue;
+        });
 
-        double avgTimeMs = (totalTimeNs / (double) TIMED_RUNS) / 1_000_000.0;
-        double memDiffKb = Math.max(0, (memAfter - memBefore) / 1024.0) / TIMED_RUNS; // Average memory diff per run
-
-        logResult("WeightedScore+Heap", n, avgTimeMs, memDiffKb, writer);
+        return logAndCreateResult("WeightedScore+Heap", n, times, memKb, writer);
     }
 
-    private void benchmarkKNN(List<TriageRequestDTO> requests, int n, PrintWriter writer) {
-        // Warmup
+    private BenchmarkResult benchmarkKNN(List<TriageRequestDTO> queries, int n, PrintWriter writer) {
+        knnClassifier.initSyntheticDataset(n);
+        
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            for (TriageRequestDTO req : requests) {
-                knnClassifier.classify(req);
-            }
+            for (TriageRequestDTO req : queries) knnClassifier.classify(req);
         }
 
-        // Measure
-        System.gc();
-        long memBefore = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-        long totalTimeNs = 0;
-
+        double[] times = new double[TIMED_RUNS];
         for (int i = 0; i < TIMED_RUNS; i++) {
             long start = System.nanoTime();
-            for (TriageRequestDTO req : requests) {
-                knnClassifier.classify(req);
-            }
-            totalTimeNs += (System.nanoTime() - start);
+            for (TriageRequestDTO req : queries) knnClassifier.classify(req);
+            times[i] = (System.nanoTime() - start) / 1_000_000.0;
         }
 
-        long memAfter = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        double memKb = measureMemory(() -> {
+            List<TriageCategory> res = new ArrayList<>(QUERIES);
+            for (TriageRequestDTO req : queries) res.add(knnClassifier.classify(req));
+            return res;
+        });
 
-        double avgTimeMs = (totalTimeNs / (double) TIMED_RUNS) / 1_000_000.0;
-        double memDiffKb = Math.max(0, (memAfter - memBefore) / 1024.0);
-
-        logResult("KNNClassifier", n, avgTimeMs, memDiffKb, writer);
+        return logAndCreateResult("KNNClassifier", n, times, memKb, writer);
+    }
+    
+    private double measureMemory(Supplier<Object> task) {
+        double[] deltas = new double[5];
+        for (int i = 0; i < 5; i++) {
+            forceGC();
+            long memBefore = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            
+            Object retained = task.get();
+            
+            forceGC();
+            long memAfter = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            deltas[i] = Math.max(0, (memAfter - memBefore) / 1024.0);
+            
+            if (retained != null) {
+                retained.hashCode(); // prevent optimization removal
+            }
+        }
+        Arrays.sort(deltas);
+        return deltas[2]; // Median
+    }
+    
+    private void forceGC() {
+        System.gc();
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
-    private void logResult(String algo, int n, double timeMs, double memKb, PrintWriter writer) {
-        System.out.printf("%-20s | %-10d | %-15.3f | %-15.2f%n", algo, n, timeMs, memKb);
-        writer.printf("%s,%d,%.3f,%.2f%n", algo, n, timeMs, memKb);
+    private BenchmarkResult logAndCreateResult(String algo, int n, double[] times, double memKb, PrintWriter writer) {
+        Arrays.sort(times);
+        double median = (times[times.length / 2] + times[(times.length - 1) / 2]) / 2.0;
+        
+        double sum = 0;
+        for (double t : times) sum += t;
+        double avg = sum / times.length;
+        
+        double sqSum = 0;
+        for (double t : times) sqSum += (t - avg) * (t - avg);
+        double stddev = Math.sqrt(sqSum / times.length);
+        
+        writer.printf("%s,%d,%.3f,%.3f,%.3f,%.2f%n", algo, n, avg, median, stddev, memKb);
+        return new BenchmarkResult(algo, n, avg, median, stddev, memKb);
     }
 
     private List<TriageRequestDTO> generateRequests(int count) {
@@ -179,5 +259,23 @@ public class TriageBenchmarkTest {
             list.add(req);
         }
         return list;
+    }
+    
+    private static class BenchmarkResult {
+        String algo;
+        int n;
+        double avgTimeMs;
+        double medianTimeMs;
+        double stddevTimeMs;
+        double memKb;
+
+        public BenchmarkResult(String algo, int n, double avgTimeMs, double medianTimeMs, double stddevTimeMs, double memKb) {
+            this.algo = algo;
+            this.n = n;
+            this.avgTimeMs = avgTimeMs;
+            this.medianTimeMs = medianTimeMs;
+            this.stddevTimeMs = stddevTimeMs;
+            this.memKb = memKb;
+        }
     }
 }
