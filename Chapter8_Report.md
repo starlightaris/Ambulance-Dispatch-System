@@ -25,7 +25,7 @@ This chapter details the complexity analysis and performance benchmarking of the
 
 ## 3. Empirical Benchmark Results
 
-Benchmarks were executed using the JMH framework (Java Microbenchmark Harness) from $N=100$ to $N=100,000$.
+Benchmarks were executed using custom-built timing loops with `System.nanoTime()` in `TriageBenchmarkTest.java`, scaling from $N=100$ to $N=100,000$.
 
 ### 3.1 Execution Time & Empirical Growth Rates
 

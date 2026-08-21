@@ -50,35 +50,65 @@ class TriageControllerIntegrationTest {
         triageService.initQueue();
     }
 
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     @Test
     void testEvaluateReturnsCorrectQueuePosition() throws Exception {
         // First patient (RED)
-        String req1 = "{\"breathing\":false,\"pulseRate\":0,\"avpu\":\"UNRESPONSIVE\",\"oxygenSaturation\":95,\"systolicBP\":120,\"painScore\":0,\"temperature\":37.0,\"age\":30,\"hazardPresent\":false}";
+        TriageRequestDTO req1 = new TriageRequestDTO();
+        req1.setBreathing(false);
+        req1.setPulseRate(0);
+        req1.setAvpu(ConsciousnessLevel.UNRESPONSIVE);
+        req1.setOxygenSaturation(95);
+        req1.setSystolicBP(120);
+        req1.setPainScore(0);
+        req1.setTemperature(37.0);
+        req1.setAge(30);
+        req1.setHazardPresent(false);
 
         mockMvc.perform(post("/api/v1/triage/evaluate")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(req1))
+                .content(objectMapper.writeValueAsString(req1)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.category").value(TriageCategory.RED.name()))
                 .andExpect(jsonPath("$.queuePosition").value(1));
 
         // Second patient (BLUE)
-        String req2 = "{\"breathing\":true,\"pulseRate\":80,\"avpu\":\"ALERT\",\"oxygenSaturation\":98,\"systolicBP\":120,\"painScore\":2,\"temperature\":37.0,\"age\":25,\"hazardPresent\":false}";
+        TriageRequestDTO req2 = new TriageRequestDTO();
+        req2.setBreathing(true);
+        req2.setPulseRate(80);
+        req2.setAvpu(ConsciousnessLevel.ALERT);
+        req2.setOxygenSaturation(98);
+        req2.setSystolicBP(120);
+        req2.setPainScore(2);
+        req2.setTemperature(37.0);
+        req2.setAge(25);
+        req2.setHazardPresent(false);
 
         mockMvc.perform(post("/api/v1/triage/evaluate")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(req2))
+                .content(objectMapper.writeValueAsString(req2)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.category").value(TriageCategory.GREEN.name()))
                 .andExpect(jsonPath("$.queuePosition").value(2)); // behind RED
 
         // Third patient (ORANGE)
-        String req3 = "{\"breathing\":true,\"pulseRate\":130,\"avpu\":\"VOICE\",\"oxygenSaturation\":95,\"systolicBP\":120,\"painScore\":8,\"temperature\":37.0,\"age\":40,\"hazardPresent\":false}";
+        TriageRequestDTO req3 = new TriageRequestDTO();
+        req3.setBreathing(true);
+        req3.setPulseRate(130);
+        req3.setAvpu(ConsciousnessLevel.VOICE);
+        req3.setOxygenSaturation(95);
+        req3.setSystolicBP(120);
+        req3.setPainScore(8);
+        req3.setTemperature(37.0);
+        req3.setAge(40);
+        req3.setHazardPresent(false);
 
         // Should rank 2nd (behind RED, ahead of BLUE)
         mockMvc.perform(post("/api/v1/triage/evaluate")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(req3))
+                .content(objectMapper.writeValueAsString(req3)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.category").value(TriageCategory.ORANGE.name()))
                 .andExpect(jsonPath("$.queuePosition").value(2));
