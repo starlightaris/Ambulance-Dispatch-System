@@ -1,0 +1,13 @@
+algorithm,N,avg_time_ms,memory_delta_kb
+MTSDecisionTree,100,0.041,664.90
+WeightedScore+Heap,100,0.309,62.44
+KNNClassifier,100,9.355,20307.29
+MTSDecisionTree,1000,0.087,639.62
+WeightedScore+Heap,1000,0.520,268.97
+KNNClassifier,1000,66.754,4920.24
+MTSDecisionTree,10000,0.232,854.90
+WeightedScore+Heap,10000,2.001,2423.99
+KNNClassifier,10000,636.816,995.47
+MTSDecisionTree,100000,1.658,940.34
+WeightedScore+Heap,100000,14.444,14111.85
+KNNClassifier,100000,6464.825,29708.08
