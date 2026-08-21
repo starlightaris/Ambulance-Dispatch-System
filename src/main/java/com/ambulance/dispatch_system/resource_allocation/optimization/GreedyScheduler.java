@@ -1,9 +1,13 @@
 package com.ambulance.dispatch_system.resource_allocation.optimization;
 
 import com.ambulance.dispatch_system.common.entity.Ambulance;
+import com.ambulance.dispatch_system.common.entity.RoadEdge;
+import com.ambulance.dispatch_system.common.entity.RoadNode;
 import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
 import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
+import com.ambulance.dispatch_system.common.repository.RoadEdgeRepository;
+import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -16,18 +20,27 @@ public class GreedyScheduler {
 
     private final AmbulanceRepository ambulanceRepository;
     private final FitnessEvaluator fitnessEvaluator;
+    private final RoadNodeRepository roadNodeRepository;
+    private final RoadEdgeRepository roadEdgeRepository;
 
-    public GreedyScheduler(AmbulanceRepository ambulanceRepository, FitnessEvaluator fitnessEvaluator) {
+    public GreedyScheduler(AmbulanceRepository ambulanceRepository, FitnessEvaluator fitnessEvaluator,
+                           RoadNodeRepository roadNodeRepository, RoadEdgeRepository roadEdgeRepository) {
         this.ambulanceRepository = ambulanceRepository;
         this.fitnessEvaluator = fitnessEvaluator;
+        this.roadNodeRepository = roadNodeRepository;
+        this.roadEdgeRepository = roadEdgeRepository;
     }
 
     public Optional<Ambulance> findBestAmbulance(String patientNode, Set<MedicalEquipment> requiredEquipment) {
         List<Ambulance> availableAmbulances = ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE);
+        
+        // Fetch graph data only once to save database performance
+        List<RoadNode> allNodes = roadNodeRepository.findAll();
+        List<RoadEdge> allEdges = roadEdgeRepository.findAll();
 
         return availableAmbulances.stream()
                 .filter(amb -> amb.getEquipment().containsAll(requiredEquipment))
-                .min(Comparator.comparingDouble(amb -> 
-                        fitnessEvaluator.calculateFitness(amb, patientNode, requiredEquipment)));
+                .min(Comparator.comparingDouble(amb ->
+                        fitnessEvaluator.calculateFitness(amb, patientNode, requiredEquipment, allNodes, allEdges)));
     }
 }
