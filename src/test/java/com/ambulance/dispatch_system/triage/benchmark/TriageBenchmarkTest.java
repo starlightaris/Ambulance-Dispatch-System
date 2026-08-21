@@ -51,7 +51,7 @@ public class TriageBenchmarkTest {
         List<BenchmarkResult> results = new ArrayList<>();
 
         try (PrintWriter writer = new PrintWriter(new FileWriter("benchmark-results.csv"))) {
-            writer.println("algorithm,N,avg_time_ms,median_time_ms,stddev_time_ms,memory_delta_kb");
+            writer.println("algorithm,N,avg_time_ms,median_time_ms,stddev_time_ms,memory_delta_kb,resident_footprint_kb");
 
             for (int n : N_VALUES) {
                 System.out.println("Benchmarking N=" + n);
@@ -119,7 +119,7 @@ public class TriageBenchmarkTest {
             return res;
         });
 
-        return logAndCreateResult("MTSDecisionTree", n, times, memKb, writer);
+        return logAndCreateResult("MTSDecisionTree", n, times, memKb, "N/A", writer);
     }
 
     private BenchmarkResult benchmarkWeightedHeap(List<TriageRequestDTO> queries, int n, PrintWriter writer) {
@@ -171,11 +171,26 @@ public class TriageBenchmarkTest {
             return queue;
         });
 
-        return logAndCreateResult("WeightedScore+Heap", n, times, memKb, writer);
+        return logAndCreateResult("WeightedScore+Heap", n, times, memKb, "N/A", writer);
     }
 
     private BenchmarkResult benchmarkKNN(List<TriageRequestDTO> queries, int n, PrintWriter writer) {
+        // Measure resident dataset footprint for KNNClassifier
+        // MTS and Heap don't hold an O(N) historical structure in the same way, so this is only for KNN.
+        knnClassifier.initSyntheticDataset(0); // clear it first
+        forceGC();
+        long baseline = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        
         knnClassifier.initSyntheticDataset(n);
+        
+        forceGC();
+        long afterDataset = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        
+        double baselineKb = baseline / 1024.0;
+        double afterDatasetKb = afterDataset / 1024.0;
+        double residentFootprintKb = Math.max(0, afterDatasetKb - baselineKb);
+        
+        System.out.printf("KNN Resident Memory (N=%d): Baseline=%.2f KB, AfterDataset=%.2f KB%n", n, baselineKb, afterDatasetKb);
         
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
             for (TriageRequestDTO req : queries) knnClassifier.classify(req);
@@ -194,7 +209,7 @@ public class TriageBenchmarkTest {
             return res;
         });
 
-        return logAndCreateResult("KNNClassifier", n, times, memKb, writer);
+        return logAndCreateResult("KNNClassifier", n, times, memKb, String.format("%.2f", residentFootprintKb), writer);
     }
     
     private double measureMemory(Supplier<Object> task) {
@@ -226,7 +241,7 @@ public class TriageBenchmarkTest {
         }
     }
 
-    private BenchmarkResult logAndCreateResult(String algo, int n, double[] times, double memKb, PrintWriter writer) {
+    private BenchmarkResult logAndCreateResult(String algo, int n, double[] times, double memKb, String residentKb, PrintWriter writer) {
         Arrays.sort(times);
         double median = (times[times.length / 2] + times[(times.length - 1) / 2]) / 2.0;
         
@@ -238,8 +253,8 @@ public class TriageBenchmarkTest {
         for (double t : times) sqSum += (t - avg) * (t - avg);
         double stddev = Math.sqrt(sqSum / times.length);
         
-        writer.printf("%s,%d,%.3f,%.3f,%.3f,%.2f%n", algo, n, avg, median, stddev, memKb);
-        return new BenchmarkResult(algo, n, avg, median, stddev, memKb);
+        writer.printf("%s,%d,%.3f,%.3f,%.3f,%.2f,%s%n", algo, n, avg, median, stddev, memKb, residentKb);
+        return new BenchmarkResult(algo, n, avg, median, stddev, memKb, residentKb);
     }
 
     private List<TriageRequestDTO> generateRequests(int count) {
@@ -268,14 +283,16 @@ public class TriageBenchmarkTest {
         double medianTimeMs;
         double stddevTimeMs;
         double memKb;
+        String residentKb;
 
-        public BenchmarkResult(String algo, int n, double avgTimeMs, double medianTimeMs, double stddevTimeMs, double memKb) {
+        public BenchmarkResult(String algo, int n, double avgTimeMs, double medianTimeMs, double stddevTimeMs, double memKb, String residentKb) {
             this.algo = algo;
             this.n = n;
             this.avgTimeMs = avgTimeMs;
             this.medianTimeMs = medianTimeMs;
             this.stddevTimeMs = stddevTimeMs;
             this.memKb = memKb;
+            this.residentKb = residentKb;
         }
     }
 }
