@@ -83,4 +83,71 @@ class PriorityDispatchQueueTest {
         assertThrows(NoSuchElementException.class, () -> queue.peek());
         assertThrows(NoSuchElementException.class, () -> queue.extractMax());
     }
+
+    @Test
+    void testGetRank() {
+        TriageAssessment a1 = createAssessment(TriageCategory.GREEN, 5.0, LocalDateTime.now());
+        TriageAssessment a2 = createAssessment(TriageCategory.RED, 15.0, LocalDateTime.now());
+        TriageAssessment a3 = createAssessment(TriageCategory.YELLOW, 10.0, LocalDateTime.now());
+        
+        queue.insert(a1);
+        queue.insert(a2);
+        queue.insert(a3);
+        
+        // RED (a2) is rank 1, YELLOW (a3) is rank 2, GREEN (a1) is rank 3
+        assertEquals(1, queue.getRank(a2));
+        assertEquals(2, queue.getRank(a3));
+        assertEquals(3, queue.getRank(a1));
+    }
+    
+    @Test
+    void testRemove() {
+        TriageAssessment a1 = createAssessment(TriageCategory.RED, 15.0, LocalDateTime.now());
+        TriageAssessment a2 = createAssessment(TriageCategory.YELLOW, 10.0, LocalDateTime.now());
+        TriageAssessment a3 = createAssessment(TriageCategory.GREEN, 5.0, LocalDateTime.now());
+        
+        queue.insert(a1);
+        queue.insert(a2);
+        queue.insert(a3);
+        
+        assertEquals(3, queue.size());
+        
+        assertTrue(queue.remove(a2.getId()));
+        assertEquals(2, queue.size());
+        
+        // Ensure YELLOW is gone
+        assertSame(a1, queue.extractMax());
+        assertSame(a3, queue.extractMax());
+        assertTrue(queue.isEmpty());
+    }
+    
+    @Test
+    void testConcurrency() throws InterruptedException {
+        int threads = 10;
+        int insertsPerThread = 100;
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(threads);
+        
+        for (int i = 0; i < threads; i++) {
+            executor.submit(() -> {
+                for (int j = 0; j < insertsPerThread; j++) {
+                    queue.insert(createAssessment(TriageCategory.RED, j, LocalDateTime.now()));
+                }
+                latch.countDown();
+            });
+        }
+        
+        latch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        assertEquals(threads * insertsPerThread, queue.size());
+        
+        // Ensure invariants hold (heap property)
+        TriageAssessment prev = queue.extractMax();
+        while (!queue.isEmpty()) {
+            TriageAssessment current = queue.extractMax();
+            // Since we extracted the max, previous should be >= current
+            assertTrue(prev.getTieBreakerScore() >= current.getTieBreakerScore() || prev.getCreatedAt().isBefore(current.getCreatedAt()));
+            prev = current;
+        }
+        executor.shutdown();
+    }
 }

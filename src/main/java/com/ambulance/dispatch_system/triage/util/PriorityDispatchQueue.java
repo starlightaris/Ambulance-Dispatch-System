@@ -29,7 +29,7 @@ public class PriorityDispatchQueue {
      *
      * @param assessment the TriageAssessment to insert
      */
-    public void insert(TriageAssessment assessment) {
+    public synchronized void insert(TriageAssessment assessment) {
         if (size == heap.length) {
             heap = Arrays.copyOf(heap, heap.length * 2);
         }
@@ -46,7 +46,7 @@ public class PriorityDispatchQueue {
      * @return the highest priority TriageAssessment
      * @throws NoSuchElementException if the queue is empty
      */
-    public TriageAssessment peek() {
+    public synchronized TriageAssessment peek() {
         if (size == 0) {
             throw new NoSuchElementException("Queue is empty");
         }
@@ -62,7 +62,7 @@ public class PriorityDispatchQueue {
      * @return the highest priority TriageAssessment
      * @throws NoSuchElementException if the queue is empty
      */
-    public TriageAssessment extractMax() {
+    public synchronized TriageAssessment extractMax() {
         if (size == 0) {
             throw new NoSuchElementException("Queue is empty");
         }
@@ -76,12 +76,44 @@ public class PriorityDispatchQueue {
         return max;
     }
 
-    public int size() {
+    public synchronized int size() {
         return size;
     }
 
-    public boolean isEmpty() {
+    public synchronized boolean isEmpty() {
         return size == 0;
+    }
+    
+    public synchronized java.util.List<TriageAssessment> getSnapshot() {
+        TriageAssessment[] copy = Arrays.copyOf(heap, size);
+        Arrays.sort(copy, (a, b) -> compare(b, a)); // Sort descending since compare returns > 0 if a > b
+        return java.util.Arrays.asList(copy);
+    }
+    
+    public synchronized boolean remove(java.util.UUID id) {
+        for (int i = 0; i < size; i++) {
+            if (heap[i].getId().equals(id)) {
+                swap(i, size - 1);
+                heap[size - 1] = null;
+                size--;
+                if (i < size) {
+                    swim(i);
+                    sink(i);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public synchronized int getRank(TriageAssessment target) {
+        int rank = 1;
+        for (int i = 0; i < size; i++) {
+            if (compare(heap[i], target) > 0) {
+                rank++;
+            }
+        }
+        return rank;
     }
 
     private void swim(int k) {

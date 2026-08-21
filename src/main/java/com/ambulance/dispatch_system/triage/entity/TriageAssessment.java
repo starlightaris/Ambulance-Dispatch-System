@@ -42,13 +42,19 @@ public class TriageAssessment {
     // Status flag to know if this assessment is still in queue
     private Boolean resolved;
 
+    private Integer severityRank;
+
     @PrePersist
-    protected void onCreate() {
+    @PreUpdate
+    protected void onPersistOrUpdate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
         if (resolved == null) {
             resolved = false;
+        }
+        if (assignedCategory != null) {
+            severityRank = assignedCategory.getSeverity();
         }
     }
 
@@ -98,4 +104,7 @@ public class TriageAssessment {
     
     public Boolean getResolved() { return resolved; }
     public void setResolved(Boolean resolved) { this.resolved = resolved; }
+
+    public Integer getSeverityRank() { return severityRank; }
+    public void setSeverityRank(Integer severityRank) { this.severityRank = severityRank; }
 }

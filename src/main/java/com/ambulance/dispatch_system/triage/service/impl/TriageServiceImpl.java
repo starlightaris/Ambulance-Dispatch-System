@@ -73,12 +73,8 @@ public class TriageServiceImpl implements TriageService {
         // 4. Push onto PriorityDispatchQueue
         dispatchQueue.insert(savedAssessment);
 
-        // Calculate queue position based on current size
-        // Since we just inserted it, the position might not be exactly "index", but we can estimate or return total size
-        // A true queue position requires finding its index in the heap, which is not strictly ordered as an array.
-        // We'll return the total items in queue as a rough "position" or 1 if it's the only one.
-        // Or if we want exact position, we would need to simulate extracting. We'll return the size for now.
-        int position = dispatchQueue.size();
+        // Calculate queue position based on actual strictly greater elements in the heap
+        int position = dispatchQueue.getRank(savedAssessment);
 
         return new TriageResponseDTO(
                 savedAssessment.getAssignedCategory(),
@@ -89,12 +85,10 @@ public class TriageServiceImpl implements TriageService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<TriageResponseDTO> getActiveQueue() {
-        // Fetch ordered from DB instead of destructive extract from heap to preserve state
-        List<TriageAssessment> activeAssessments = assessmentRepository.findActiveQueue();
+        // Fetch non-destructive snapshot from heap
+        List<TriageAssessment> activeAssessments = dispatchQueue.getSnapshot();
         
-        // We map DB results to response DTOs.
         int position = 1;
         List<TriageResponseDTO> response = new java.util.ArrayList<>();
         for (TriageAssessment ta : activeAssessments) {
@@ -106,5 +100,14 @@ public class TriageServiceImpl implements TriageService {
             ));
         }
         return response;
+    }
+    
+    @Override
+    @Transactional
+    public void markResolved(java.util.UUID id) {
+        TriageAssessment assessment = assessmentRepository.findById(id).orElseThrow();
+        assessment.setResolved(true);
+        assessmentRepository.save(assessment);
+        dispatchQueue.remove(id);
     }
 }

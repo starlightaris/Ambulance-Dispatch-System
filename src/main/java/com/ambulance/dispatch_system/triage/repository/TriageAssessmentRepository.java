@@ -12,6 +12,6 @@ import java.util.UUID;
 public interface TriageAssessmentRepository extends JpaRepository<TriageAssessment, UUID> {
 
     @Query("SELECT t FROM TriageAssessment t WHERE t.resolved = false " +
-           "ORDER BY t.assignedCategory.severity DESC, t.tieBreakerScore DESC, t.createdAt ASC")
+           "ORDER BY t.severityRank DESC, t.tieBreakerScore DESC, t.createdAt ASC")
     List<TriageAssessment> findActiveQueue();
 }

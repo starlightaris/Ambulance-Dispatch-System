@@ -35,6 +35,12 @@ public class TriageController {
         List<TriageResponseDTO> queue = triageService.getActiveQueue();
         return ResponseEntity.ok(queue);
     }
+    
+    @PutMapping("/{id}/resolve")
+    public ResponseEntity<Void> markResolved(@PathVariable java.util.UUID id) {
+        triageService.markResolved(id);
+        return ResponseEntity.noContent().build();
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

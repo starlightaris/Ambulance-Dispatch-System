@@ -22,4 +22,6 @@ public interface TriageService {
      * @return List of TriageResponseDTOs representing the queue.
      */
     List<TriageResponseDTO> getActiveQueue();
+
+    void markResolved(java.util.UUID id);
 }

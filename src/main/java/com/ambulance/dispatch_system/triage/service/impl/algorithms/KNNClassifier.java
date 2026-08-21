@@ -31,7 +31,8 @@ public class KNNClassifier {
     private static final int SYNTHETIC_DATASET_SIZE = 500;
     private final List<HistoricalRecord> dataset = new ArrayList<>();
 
-    @PostConstruct
+    // Removed @PostConstruct to prevent automatic generation of the synthetic dataset 
+    // on app startup. It is now only populated when benchmarking code requests it.
     public void initSyntheticDataset() {
         initSyntheticDataset(SYNTHETIC_DATASET_SIZE);
     }
