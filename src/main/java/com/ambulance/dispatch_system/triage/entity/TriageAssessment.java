@@ -8,40 +8,73 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "triage_assessments")
+@Table(
+        name = "triage_assessments",
+        schema = "task4",
+        indexes = @Index(
+                name = "idx_triage_active_queue",
+                columnList = "resolved, severity_rank, tie_breaker_score, created_at"
+        )
+)
 public class TriageAssessment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(nullable = false)
     private Boolean breathing;
+
+    @Column(name = "pulse_rate", nullable = false)
     private Integer pulseRate;
-    
+
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
     private ConsciousnessLevel avpu;
-    
+
+    @Column(name = "oxygen_saturation", nullable = false)
     private Integer oxygenSaturation;
+
+    @Column(name = "systolic_bp", nullable = false)
     private Integer systolicBP;
+
+    @Column(name = "pain_score", nullable = false)
     private Integer painScore;
+
+    @Column(nullable = false)
     private Double temperature;
+
+    @Column(nullable = false)
     private Integer age;
+
+    @Column(name = "hazard_present", nullable = false)
     private Boolean hazardPresent;
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "triage_assessment_symptoms", joinColumns = @JoinColumn(name = "assessment_id"))
-    @Column(name = "symptom")
+    @CollectionTable(
+            name = "triage_assessment_symptoms",
+            schema = "task4",
+            joinColumns = @JoinColumn(name = "assessment_id", nullable = false)
+    )
+    @OrderColumn(name = "symptom_order")
+    @Column(name = "symptom", nullable = false)
     private List<String> symptoms;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "assigned_category", nullable = false, length = 16)
     private TriageCategory assignedCategory;
-    
+
+    @Column(name = "tie_breaker_score", nullable = false)
     private Double tieBreakerScore;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     // Status flag to know if this assessment is still in queue
+    @Column(nullable = false)
     private Boolean resolved;
 
+    @Column(name = "severity_rank", nullable = false)
     private Integer severityRank;
 
     @PrePersist
