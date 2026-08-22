@@ -1,0 +1,13 @@
+# Task 4 / Supabase local configuration
+#
+# Copy this file to application-local.properties (which is gitignored), then copy
+# the JDBC Session Pooler URL from Supabase > Connect > Session pooler > JDBC.
+# Keep port 5432, include sslmode=require, and never commit the real URL.
+
+spring.datasource.url=${SUPABASE_DB_URL}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# The Task 4 entity maps explicitly to the private `task4` database schema.
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.show-sql=false

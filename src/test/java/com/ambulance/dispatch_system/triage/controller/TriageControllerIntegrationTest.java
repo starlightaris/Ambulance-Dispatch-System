@@ -168,16 +168,10 @@ class TriageControllerIntegrationTest {
     @Transactional
     void testHeapRehydrationOnStartup() throws Exception {
         // Bypass heap and insert directly into DB to simulate existing unresolved assessments
-        TriageAssessment a1 = new TriageAssessment();
-        a1.setAssignedCategory(TriageCategory.RED);
-        a1.setTieBreakerScore(15.0);
-        a1.setSeverityRank(TriageCategory.RED.getSeverity());
+        TriageAssessment a1 = createPersistableAssessment(TriageCategory.RED, 15.0);
         assessmentRepository.saveAndFlush(a1);
         
-        TriageAssessment a2 = new TriageAssessment();
-        a2.setAssignedCategory(TriageCategory.GREEN);
-        a2.setTieBreakerScore(5.0);
-        a2.setSeverityRank(TriageCategory.GREEN.getSeverity());
+        TriageAssessment a2 = createPersistableAssessment(TriageCategory.GREEN, 5.0);
         assessmentRepository.saveAndFlush(a2);
         
         // Call the @PostConstruct method manually to simulate app startup
@@ -189,5 +183,21 @@ class TriageControllerIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].category").value("RED"))
                 .andExpect(jsonPath("$[1].category").value("GREEN"));
+    }
+
+    private TriageAssessment createPersistableAssessment(TriageCategory category, double score) {
+        TriageAssessment assessment = new TriageAssessment();
+        assessment.setBreathing(true);
+        assessment.setPulseRate(80);
+        assessment.setAvpu(ConsciousnessLevel.ALERT);
+        assessment.setOxygenSaturation(98);
+        assessment.setSystolicBP(120);
+        assessment.setPainScore(2);
+        assessment.setTemperature(37.0);
+        assessment.setAge(30);
+        assessment.setHazardPresent(false);
+        assessment.setAssignedCategory(category);
+        assessment.setTieBreakerScore(score);
+        return assessment;
     }
 }
