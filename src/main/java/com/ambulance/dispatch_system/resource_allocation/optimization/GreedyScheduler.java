@@ -33,14 +33,23 @@ public class GreedyScheduler {
 
     public Optional<Ambulance> findBestAmbulance(String patientNode, Set<MedicalEquipment> requiredEquipment) {
         List<Ambulance> availableAmbulances = ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE);
-        
+
         // Fetch graph data only once to save database performance
         List<RoadNode> allNodes = roadNodeRepository.findAll();
         List<RoadEdge> allEdges = roadEdgeRepository.findAll();
 
+        // Score each candidate exactly once. Comparing with Comparator.comparingDouble over
+        // calculateFitness would re-run the shortest-path search on both sides of every
+        // comparison, so a fleet of n ambulances cost roughly 2n graph traversals.
         return availableAmbulances.stream()
                 .filter(amb -> amb.getEquipment().containsAll(requiredEquipment))
-                .min(Comparator.comparingDouble(amb ->
-                        fitnessEvaluator.calculateFitness(amb, patientNode, requiredEquipment, allNodes, allEdges)));
+                .map(amb -> new ScoredAmbulance(amb, fitnessEvaluator.calculateFitness(
+                        amb, patientNode, requiredEquipment, allNodes, allEdges)))
+                .filter(scored -> scored.score() < FitnessEvaluator.UNREACHABLE)
+                .min(Comparator.comparingDouble(ScoredAmbulance::score))
+                .map(ScoredAmbulance::ambulance);
     }
+
+    /** An ambulance paired with its already-computed fitness score. */
+    private record ScoredAmbulance(Ambulance ambulance, double score) {}
 }
