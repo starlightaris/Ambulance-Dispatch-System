@@ -71,6 +71,7 @@ class TriageControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req1)))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id", not(emptyOrNullString())))
                 .andExpect(jsonPath("$.category").value(TriageCategory.RED.name()))
                 .andExpect(jsonPath("$.queuePosition").value(1));
 
@@ -117,6 +118,7 @@ class TriageControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/triage/queue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].id", not(emptyOrNullString())))
                 .andExpect(jsonPath("$[0].category").value("RED"))
                 .andExpect(jsonPath("$[1].category").value("ORANGE"))
                 .andExpect(jsonPath("$[2].category").value("GREEN"));

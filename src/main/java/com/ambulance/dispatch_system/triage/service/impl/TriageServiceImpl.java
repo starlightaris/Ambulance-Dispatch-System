@@ -73,6 +73,7 @@ public class TriageServiceImpl implements TriageService {
         int position = dispatchQueue.getRank(savedAssessment);
 
         return new TriageResponseDTO(
+                savedAssessment.getId(),
                 savedAssessment.getAssignedCategory(),
                 savedAssessment.getTieBreakerScore(),
                 position,
@@ -123,6 +124,7 @@ public class TriageServiceImpl implements TriageService {
 
         for (TriageAssessment assessment : activeAssessments) {
             response.add(new TriageResponseDTO(
+                    assessment.getId(),
                     assessment.getAssignedCategory(),
                     assessment.getTieBreakerScore(),
                     position++,
