@@ -75,6 +75,7 @@ public class DijkstraBlindSpotOptimizer {
         return blindSpots;
     }
 
+
     public double calculateShortestTravelTime(String startNodeName, String endNodeName, 
                                               List<RoadNode> allNodes, List<RoadEdge> allEdges) {
         if (startNodeName == null || endNodeName == null || startNodeName.equals(endNodeName)) {
@@ -133,6 +134,7 @@ public class DijkstraBlindSpotOptimizer {
         
         return Double.MAX_VALUE;
     }
+
 
     private record NodeDistancePair(Long nodeId, double distance) {}
 }
