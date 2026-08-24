@@ -14,46 +14,74 @@ import java.util.UUID;
  * and queue status used by the ambulance dispatch system.
  */
 @Entity
-@Table(name = "triage_assessments")
+@Table(
+        name = "triage_assessments",
+        schema = "task4",
+        indexes = @Index(
+                name = "idx_triage_active_queue",
+                columnList = "resolved, severity_rank, tie_breaker_score, created_at"
+        )
+)
 public class TriageAssessment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // Basic patient vital signs and assessment information
+    @Column(nullable = false)
     private Boolean breathing;
+
+    @Column(name = "pulse_rate", nullable = false)
     private Integer pulseRate;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
     private ConsciousnessLevel avpu;
 
+    @Column(name = "oxygen_saturation", nullable = false)
     private Integer oxygenSaturation;
+
+    @Column(name = "systolic_bp", nullable = false)
     private Integer systolicBP;
+
+    @Column(name = "pain_score", nullable = false)
     private Integer painScore;
+
+    @Column(nullable = false)
     private Double temperature;
+
+    @Column(nullable = false)
     private Integer age;
+
+    @Column(name = "hazard_present", nullable = false)
     private Boolean hazardPresent;
 
     // Stores multiple symptoms associated with this assessment
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "triage_assessment_symptoms",
-            joinColumns = @JoinColumn(name = "assessment_id")
+            schema = "task4",
+            joinColumns = @JoinColumn(name = "assessment_id", nullable = false)
     )
-    @Column(name = "symptom")
+    @OrderColumn(name = "symptom_order")
+    @Column(name = "symptom", nullable = false)
     private List<String> symptoms;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "assigned_category", nullable = false, length = 16)
     private TriageCategory assignedCategory;
 
+    @Column(name = "tie_breaker_score", nullable = false)
     private Double tieBreakerScore;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // Indicates whether this assessment is still active in the queue
+    // Status flag to know if this assessment is still in queue
+    @Column(nullable = false)
     private Boolean resolved;
 
-    // Numeric severity value used for prioritising assessments
+    @Column(name = "severity_rank", nullable = false)
     private Integer severityRank;
 
     /**
