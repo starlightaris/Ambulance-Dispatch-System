@@ -1,0 +1,174 @@
+package com.ambulance.dispatch_system.resource_allocation.optimization;
+
+import com.ambulance.dispatch_system.common.entity.Ambulance;
+import com.ambulance.dispatch_system.common.entity.RoadEdge;
+import com.ambulance.dispatch_system.common.entity.RoadNode;
+import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
+import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
+import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
+import com.ambulance.dispatch_system.common.repository.RoadEdgeRepository;
+import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
+import com.ambulance.dispatch_system.network_detection.optimization.DijkstraBlindSpotOptimizer;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+
+/**
+ * End-to-end selection tests: only the repositories are mocked, so the scheduler,
+ * the fitness function and Dijkstra all run for real against the same graph used
+ * by FitnessEvaluatorRoutingTest.
+ *
+ *     NodeA --3.0--> NodeB --4.0--> NodeC        NodeD (no edges)
+ *       \-----------1.0 (blocked)-----^
+ *
+ * NodeA -> NodeC costs 7.0; NodeB -> NodeC costs 4.0.
+ */
+class GreedySchedulerRoutingTest {
+
+    private static final Set<MedicalEquipment> NEEDS_ECG = Set.of(MedicalEquipment.ECG_MONITOR);
+
+    private RoadNode nodeA, nodeB, nodeC, nodeD;
+    private List<RoadNode> allNodes;
+    private List<RoadEdge> allEdges;
+
+    @BeforeEach
+    void setUp() {
+        nodeA = node(1L, "NodeA");
+        nodeB = node(2L, "NodeB");
+        nodeC = node(3L, "NodeC");
+        nodeD = node(4L, "NodeD");
+        allNodes = List.of(nodeA, nodeB, nodeC, nodeD);
+        allEdges = List.of(
+                edge(nodeA, nodeB, 3.0, false),
+                edge(nodeB, nodeC, 4.0, false),
+                edge(nodeA, nodeC, 1.0, true));
+    }
+
+    @Test
+    void picksTheGenuinelyNearestAmbulance() {
+        Ambulance farther = ambulance("AMB-FAR", "NodeA", NEEDS_ECG);   // 7.0 away
+        Ambulance nearer = ambulance("AMB-NEAR", "NodeB", NEEDS_ECG);   // 4.0 away
+
+        Optional<Ambulance> best = scheduler(List.of(farther, nearer))
+                .findBestAmbulance("NodeC", NEEDS_ECG);
+
+        assertTrue(best.isPresent());
+        assertEquals("AMB-NEAR", best.get().getVehicleNumber());
+    }
+
+    @Test
+    void ignoresAnAmbulanceWithNoKnownLocation() {
+        Ambulance ghost = ambulance("AMB-GHOST", null, NEEDS_ECG);
+        Ambulance real = ambulance("AMB-REAL", "NodeA", NEEDS_ECG);
+
+        Optional<Ambulance> best = scheduler(List.of(ghost, real))
+                .findBestAmbulance("NodeC", NEEDS_ECG);
+
+        assertTrue(best.isPresent());
+        assertEquals("AMB-REAL", best.get().getVehicleNumber(),
+                "a vehicle with no recorded position must not be treated as the closest");
+    }
+
+    @Test
+    void returnsEmptyWhenThePatientNodeIsUnknown() {
+        Optional<Ambulance> best = scheduler(List.of(ambulance("AMB-01", "NodeA", NEEDS_ECG)))
+                .findBestAmbulance("NoSuchNode", NEEDS_ECG);
+
+        assertTrue(best.isEmpty(), "an unroutable call must not report a dispatchable ambulance");
+    }
+
+    @Test
+    void returnsEmptyWhenNoRouteReachesThePatient() {
+        Optional<Ambulance> best = scheduler(List.of(ambulance("AMB-01", "NodeA", NEEDS_ECG)))
+                .findBestAmbulance("NodeD", NEEDS_ECG);
+
+        assertTrue(best.isEmpty());
+    }
+
+    @Test
+    void returnsEmptyWhenNoAmbulanceCarriesTheRequiredEquipment() {
+        Ambulance basic = ambulance("AMB-01", "NodeA", Set.of(MedicalEquipment.DEFIBRILLATOR));
+
+        Optional<Ambulance> best = scheduler(List.of(basic)).findBestAmbulance("NodeC", NEEDS_ECG);
+
+        assertTrue(best.isEmpty());
+    }
+
+    @Test
+    void returnsEmptyWhenNoAmbulanceIsAvailable() {
+        Optional<Ambulance> best = scheduler(List.of()).findBestAmbulance("NodeC", NEEDS_ECG);
+
+        assertTrue(best.isEmpty());
+    }
+
+    @Test
+    void computesTheShortestPathOncePerAmbulance() {
+        int[] runs = {0};
+        DijkstraBlindSpotOptimizer counting = new DijkstraBlindSpotOptimizer() {
+            @Override
+            public double calculateShortestTravelTime(String start, String end,
+                                                      List<RoadNode> nodes, List<RoadEdge> edges) {
+                runs[0]++;
+                return super.calculateShortestTravelTime(start, end, nodes, edges);
+            }
+        };
+        List<Ambulance> fleet = List.of(
+                ambulance("A1", "NodeA", NEEDS_ECG), ambulance("A2", "NodeA", NEEDS_ECG),
+                ambulance("A3", "NodeA", NEEDS_ECG), ambulance("A4", "NodeB", NEEDS_ECG),
+                ambulance("A5", "NodeB", NEEDS_ECG));
+
+        scheduler(fleet, counting).findBestAmbulance("NodeC", NEEDS_ECG);
+
+        assertEquals(fleet.size(), runs[0],
+                "scoring must not re-run the graph search on both sides of every comparison");
+    }
+
+    private GreedyScheduler scheduler(List<Ambulance> available) {
+        return scheduler(available, new DijkstraBlindSpotOptimizer());
+    }
+
+    private GreedyScheduler scheduler(List<Ambulance> available, DijkstraBlindSpotOptimizer optimizer) {
+        AmbulanceRepository ambulanceRepository = Mockito.mock(AmbulanceRepository.class);
+        RoadNodeRepository roadNodeRepository = Mockito.mock(RoadNodeRepository.class);
+        RoadEdgeRepository roadEdgeRepository = Mockito.mock(RoadEdgeRepository.class);
+
+        when(ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE)).thenReturn(available);
+        when(roadNodeRepository.findAll()).thenReturn(allNodes);
+        when(roadEdgeRepository.findAll()).thenReturn(allEdges);
+
+        return new GreedyScheduler(ambulanceRepository, new FitnessEvaluator(optimizer),
+                roadNodeRepository, roadEdgeRepository);
+    }
+
+    private RoadNode node(Long id, String name) {
+        RoadNode n = new RoadNode();
+        n.setId(id);
+        n.setName(name);
+        return n;
+    }
+
+    private RoadEdge edge(RoadNode from, RoadNode to, double minutes, boolean blocked) {
+        RoadEdge e = new RoadEdge();
+        e.setFromNode(from);
+        e.setToNode(to);
+        e.setTravelTimeMinutes(minutes);
+        e.setBlocked(blocked);
+        return e;
+    }
+
+    private Ambulance ambulance(String vehicleNumber, String location, Set<MedicalEquipment> equipment) {
+        Ambulance a = new Ambulance();
+        a.setVehicleNumber(vehicleNumber);
+        a.setCurrentLocationNode(location);
+        a.setEquipment(equipment);
+        return a;
+    }
+}
