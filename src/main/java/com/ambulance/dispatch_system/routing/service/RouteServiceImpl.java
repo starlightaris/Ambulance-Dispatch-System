@@ -31,29 +31,37 @@ public class RouteServiceImpl implements RouteService {
     @Override
     public RouteResponse findRoute(RouteRequest request) {
 
+        return findRoute(
+                request.getStartLocationId(),
+                request.getDestinationLocationId()
+        );
+    }
+
+    /**
+     * Reusable routing method for other modules.
+     *
+     * Other modules can use Task 1's A* routing
+     * without implementing their own routing algorithm.
+     */
+    @Override
+    public RouteResponse findRoute(
+            Long startLocationId,
+            Long destinationLocationId) {
+
         RoadNode start = roadNodeRepository
-                .findById(request.getStartLocationId())
+                .findById(startLocationId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Start location not found"));
+                        new IllegalArgumentException(
+                                "Start location not found"));
 
         RoadNode destination = roadNodeRepository
-                .findById(request.getDestinationLocationId())
+                .findById(destinationLocationId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Destination location not found"));
+                        new IllegalArgumentException(
+                                "Destination location not found"));
 
         List<RoadEdge> availableEdges =
                 roadEdgeRepository.findByBlockedFalse();
-
-        String algorithm = request.getAlgorithm();
-
-        if (algorithm == null || algorithm.isBlank()) {
-            algorithm = "ASTAR";
-        }
-
-        if (!algorithm.equalsIgnoreCase("ASTAR")) {
-            throw new IllegalArgumentException(
-                    "Currently supported algorithm: ASTAR");
-        }
 
         List<RoadNode> route =
                 aStarAlgorithm.findShortestPath(
@@ -67,10 +75,14 @@ public class RouteServiceImpl implements RouteService {
         }
 
         double totalTravelTime =
-                calculateTravelTime(route, availableEdges);
+                calculateTravelTime(
+                        route,
+                        availableEdges);
 
         double totalDistance =
-                calculateDistance(route, availableEdges);
+                calculateDistance(
+                        route,
+                        availableEdges);
 
         return new RouteResponse(
                 "ASTAR",
@@ -91,7 +103,10 @@ public class RouteServiceImpl implements RouteService {
             RoadNode from = route.get(i);
             RoadNode to = route.get(i + 1);
 
-            RoadEdge edge = findEdge(from, to, edges);
+            RoadEdge edge = findEdge(
+                    from,
+                    to,
+                    edges);
 
             if (edge != null) {
                 total += edge.getTravelTimeMinutes();
@@ -112,7 +127,10 @@ public class RouteServiceImpl implements RouteService {
             RoadNode from = route.get(i);
             RoadNode to = route.get(i + 1);
 
-            RoadEdge edge = findEdge(from, to, edges);
+            RoadEdge edge = findEdge(
+                    from,
+                    to,
+                    edges);
 
             if (edge != null) {
                 total += edge.getDistanceKm();
