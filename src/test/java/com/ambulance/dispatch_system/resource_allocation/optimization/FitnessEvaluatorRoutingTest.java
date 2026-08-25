@@ -4,14 +4,21 @@ import com.ambulance.dispatch_system.common.entity.Ambulance;
 import com.ambulance.dispatch_system.common.entity.RoadEdge;
 import com.ambulance.dispatch_system.common.entity.RoadNode;
 import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
-import com.ambulance.dispatch_system.network_detection.optimization.DijkstraBlindSpotOptimizer;
+import com.ambulance.dispatch_system.routing.service.RouteService;
+import com.ambulance.dispatch_system.routing.service.RouteServiceImpl;
+import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
+import com.ambulance.dispatch_system.common.repository.RoadEdgeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Exercises FitnessEvaluator against a real road graph and a real Dijkstra run,
@@ -35,6 +42,8 @@ class FitnessEvaluatorRoutingTest {
     private List<RoadEdge> allEdges;
     private FitnessEvaluator evaluator;
 
+    private RoadEdgeRepository roadEdgeRepository;
+
     @BeforeEach
     void setUp() {
         nodeA = node(1L, "NodeA");
@@ -46,13 +55,25 @@ class FitnessEvaluatorRoutingTest {
                 edge(nodeA, nodeB, 3.0, false),
                 edge(nodeB, nodeC, 4.0, false),
                 edge(nodeA, nodeC, 1.0, true));
-        evaluator = new FitnessEvaluator(new DijkstraBlindSpotOptimizer());
+                
+        RoadNodeRepository roadNodeRepository = Mockito.mock(RoadNodeRepository.class);
+        roadEdgeRepository = Mockito.mock(RoadEdgeRepository.class);
+        
+        when(roadNodeRepository.findById(any())).thenAnswer(inv -> {
+            Long id = inv.getArgument(0);
+            return allNodes.stream().filter(n -> n.getId().equals(id)).findFirst();
+        });
+        when(roadEdgeRepository.findByBlockedFalse()).thenAnswer(inv -> 
+            allEdges.stream().filter(e -> !e.isBlocked()).collect(Collectors.toList())
+        );
+
+        evaluator = new FitnessEvaluator(new RouteServiceImpl(roadNodeRepository, roadEdgeRepository));
     }
 
     @Test
     void usesTheRealShortestPathThroughTheRoadGraph() {
         double score = evaluator.calculateFitness(
-                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes, allEdges);
+                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes);
 
         // 3.0 (A->B) + 4.0 (B->C), not the blocked 1.0 shortcut and not a random number.
         assertEquals(7.0, score, DELTA);
@@ -60,13 +81,13 @@ class FitnessEvaluatorRoutingTest {
 
     @Test
     void takesTheDirectRouteOnceItIsNoLongerBlocked() {
-        List<RoadEdge> unblocked = List.of(
+        allEdges = List.of(
                 edge(nodeA, nodeB, 3.0, false),
                 edge(nodeB, nodeC, 4.0, false),
                 edge(nodeA, nodeC, 1.0, false));
 
         double score = evaluator.calculateFitness(
-                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes, unblocked);
+                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes);
 
         assertEquals(1.0, score, DELTA);
     }
@@ -76,7 +97,7 @@ class FitnessEvaluatorRoutingTest {
         Ambulance overEquipped = ambulance("AMB-02", "NodeA",
                 Set.of(MedicalEquipment.ECG_MONITOR, MedicalEquipment.DEFIBRILLATOR));
 
-        double score = evaluator.calculateFitness(overEquipped, "NodeC", NEEDS_ECG, allNodes, allEdges);
+        double score = evaluator.calculateFitness(overEquipped, "NodeC", NEEDS_ECG, allNodes);
 
         // 7.0 travel + one unused item * 5.0
         assertEquals(12.0, score, DELTA);
@@ -85,7 +106,7 @@ class FitnessEvaluatorRoutingTest {
     @Test
     void anAmbulanceAlreadyAtThePatientCostsNothing() {
         double score = evaluator.calculateFitness(
-                ambulance("AMB-03", "NodeC", NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes, allEdges);
+                ambulance("AMB-03", "NodeC", NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes);
 
         assertEquals(0.0, score, DELTA);
     }
@@ -93,7 +114,7 @@ class FitnessEvaluatorRoutingTest {
     @Test
     void ambulanceWithNoKnownLocationIsUnreachable() {
         double score = evaluator.calculateFitness(
-                ambulance("AMB-GHOST", null, NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes, allEdges);
+                ambulance("AMB-GHOST", null, NEEDS_ECG), "NodeC", NEEDS_ECG, allNodes);
 
         assertEquals(FitnessEvaluator.UNREACHABLE, score,
                 "a vehicle with no recorded position must not score as if it were already there");
@@ -102,7 +123,7 @@ class FitnessEvaluatorRoutingTest {
     @Test
     void callWithNoLocationIsUnreachable() {
         double score = evaluator.calculateFitness(
-                ambulance("AMB-01", "NodeA", NEEDS_ECG), null, NEEDS_ECG, allNodes, allEdges);
+                ambulance("AMB-01", "NodeA", NEEDS_ECG), null, NEEDS_ECG, allNodes);
 
         assertEquals(FitnessEvaluator.UNREACHABLE, score);
     }
@@ -110,7 +131,7 @@ class FitnessEvaluatorRoutingTest {
     @Test
     void unknownPatientNodeIsUnreachable() {
         double score = evaluator.calculateFitness(
-                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NoSuchNode", NEEDS_ECG, allNodes, allEdges);
+                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NoSuchNode", NEEDS_ECG, allNodes);
 
         assertEquals(FitnessEvaluator.UNREACHABLE, score);
     }
@@ -118,7 +139,7 @@ class FitnessEvaluatorRoutingTest {
     @Test
     void patientOnADisconnectedNodeIsUnreachable() {
         double score = evaluator.calculateFitness(
-                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NodeD", NEEDS_ECG, allNodes, allEdges);
+                ambulance("AMB-01", "NodeA", NEEDS_ECG), "NodeD", NEEDS_ECG, allNodes);
 
         assertEquals(FitnessEvaluator.UNREACHABLE, score);
     }
