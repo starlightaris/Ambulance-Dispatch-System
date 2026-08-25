@@ -8,10 +8,7 @@ import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.RoadEdgeRepository;
 import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
-import com.ambulance.dispatch_system.routing.service.RouteService;
-import com.ambulance.dispatch_system.routing.service.RouteServiceImpl;
-import com.ambulance.dispatch_system.routing.dto.RouteResponse;
-import com.ambulance.dispatch_system.routing.dto.RouteRequest;
+import com.ambulance.dispatch_system.network_detection.optimization.DijkstraBlindSpotOptimizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -115,17 +112,12 @@ class GreedySchedulerRoutingTest {
     @Test
     void computesTheShortestPathOncePerAmbulance() {
         int[] runs = {0};
-        RouteService counting = new RouteService() {
+        DijkstraBlindSpotOptimizer counting = new DijkstraBlindSpotOptimizer() {
             @Override
-            public RouteResponse findRoute(Long startId, Long endId) {
+            public double calculateShortestTravelTime(String start, String end,
+                                                      List<RoadNode> nodes, List<RoadEdge> edges) {
                 runs[0]++;
-                RouteResponse res = new RouteResponse();
-                res.setTotalTravelTimeMinutes(10.0);
-                return res;
-            }
-            @Override
-            public RouteResponse findRoute(RouteRequest request) {
-                return findRoute(request.getStartLocationId(), request.getDestinationLocationId());
+                return super.calculateShortestTravelTime(start, end, nodes, edges);
             }
         };
         List<Ambulance> fleet = List.of(
@@ -140,28 +132,20 @@ class GreedySchedulerRoutingTest {
     }
 
     private GreedyScheduler scheduler(List<Ambulance> available) {
-        RoadNodeRepository roadNodeRepository = Mockito.mock(RoadNodeRepository.class);
-        RoadEdgeRepository roadEdgeRepository = Mockito.mock(RoadEdgeRepository.class);
-        
-        when(roadNodeRepository.findById(Mockito.any())).thenAnswer(inv -> {
-            Long id = inv.getArgument(0);
-            return allNodes.stream().filter(n -> n.getId().equals(id)).findFirst();
-        });
-        when(roadEdgeRepository.findByBlockedFalse()).thenAnswer(inv -> 
-            allEdges.stream().filter(e -> !e.isBlocked()).toList()
-        );
-        
-        return scheduler(available, new RouteServiceImpl(roadNodeRepository, roadEdgeRepository));
+        return scheduler(available, new DijkstraBlindSpotOptimizer());
     }
 
-    private GreedyScheduler scheduler(List<Ambulance> available, RouteService routeService) {
+    private GreedyScheduler scheduler(List<Ambulance> available, DijkstraBlindSpotOptimizer optimizer) {
         AmbulanceRepository ambulanceRepository = Mockito.mock(AmbulanceRepository.class);
         RoadNodeRepository roadNodeRepository = Mockito.mock(RoadNodeRepository.class);
+        RoadEdgeRepository roadEdgeRepository = Mockito.mock(RoadEdgeRepository.class);
 
         when(ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE)).thenReturn(available);
         when(roadNodeRepository.findAll()).thenReturn(allNodes);
+        when(roadEdgeRepository.findAll()).thenReturn(allEdges);
 
-        return new GreedyScheduler(ambulanceRepository, new FitnessEvaluator(routeService), roadNodeRepository);
+        return new GreedyScheduler(ambulanceRepository, new FitnessEvaluator(optimizer),
+                roadNodeRepository, roadEdgeRepository);
     }
 
     private RoadNode node(Long id, String name) {

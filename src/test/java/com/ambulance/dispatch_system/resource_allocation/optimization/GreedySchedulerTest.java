@@ -4,6 +4,7 @@ import com.ambulance.dispatch_system.common.entity.Ambulance;
 import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
 import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
+import com.ambulance.dispatch_system.common.repository.RoadEdgeRepository;
 import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ class GreedySchedulerTest {
     private AmbulanceRepository ambulanceRepository;
     private FitnessEvaluator fitnessEvaluator;
     private RoadNodeRepository roadNodeRepository;
+    private RoadEdgeRepository roadEdgeRepository;
     private GreedyScheduler greedyScheduler;
 
     @BeforeEach
@@ -32,10 +34,11 @@ class GreedySchedulerTest {
         ambulanceRepository = Mockito.mock(AmbulanceRepository.class);
         fitnessEvaluator = Mockito.mock(FitnessEvaluator.class);
         roadNodeRepository = Mockito.mock(RoadNodeRepository.class);
+        roadEdgeRepository = Mockito.mock(RoadEdgeRepository.class);
         
-        // 2. Inject all 3 into your scheduler
+        // 2. Inject all 4 into your scheduler
         greedyScheduler = new GreedyScheduler(
-                ambulanceRepository, fitnessEvaluator, roadNodeRepository
+                ambulanceRepository, fitnessEvaluator, roadNodeRepository, roadEdgeRepository
         );
     }
 
@@ -53,15 +56,16 @@ class GreedySchedulerTest {
         // Tell the mock databases what to return
         when(ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE)).thenReturn(List.of(amb1, amb2));
         when(roadNodeRepository.findAll()).thenReturn(List.of()); // Fake empty map
+        when(roadEdgeRepository.findAll()).thenReturn(List.of()); // Fake empty map
         
         // Tell the mock evaluator to give AMB-01 a better score. 
         // Note: When using Mockito, we must use eq() and anyList() to handle the new arguments.
         when(fitnessEvaluator.calculateFitness(
-                eq(amb1), eq("Node_A"), eq(Set.of(MedicalEquipment.ECG_MONITOR)), anyList())
+                eq(amb1), eq("Node_A"), eq(Set.of(MedicalEquipment.ECG_MONITOR)), anyList(), anyList())
         ).thenReturn(10.0);
         
         when(fitnessEvaluator.calculateFitness(
-                eq(amb2), eq("Node_A"), eq(Set.of(MedicalEquipment.ECG_MONITOR)), anyList())
+                eq(amb2), eq("Node_A"), eq(Set.of(MedicalEquipment.ECG_MONITOR)), anyList(), anyList())
         ).thenReturn(25.0);
 
         // Run the method
