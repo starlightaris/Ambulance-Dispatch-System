@@ -36,14 +36,14 @@ class FitnessEvaluatorTest {
 
         RouteResponse response = new RouteResponse();
         response.setTotalTravelTimeMinutes(0.0);
-        when(routeService.findRoute(any(), any())).thenReturn(response);
+        when(routeService.findRoute(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString())).thenReturn(response);
 
         RoadNode nodeA = new RoadNode();
         nodeA.setId(1L);
         nodeA.setName("NodeA");
 
         double score = fitnessEvaluator.calculateFitness(ambulance, "NodeA", 
-                Set.of(MedicalEquipment.DEFIBRILLATOR), List.of(nodeA));
+                Set.of(MedicalEquipment.DEFIBRILLATOR));
 
         assertEquals(0.0, score);
     }
@@ -56,7 +56,7 @@ class FitnessEvaluatorTest {
 
         RouteResponse response = new RouteResponse();
         response.setTotalTravelTimeMinutes(15.5);
-        when(routeService.findRoute(any(), any())).thenReturn(response);
+        when(routeService.findRoute(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString())).thenReturn(response);
 
         RoadNode nodeA = new RoadNode();
         nodeA.setId(1L);
@@ -68,7 +68,7 @@ class FitnessEvaluatorTest {
 
         // 1 extra equipment = 5.0 penalty + 15.5 distance = 20.5
         double score = fitnessEvaluator.calculateFitness(ambulance, "NodeB", 
-                Set.of(MedicalEquipment.DEFIBRILLATOR), List.of(nodeA, nodeB));
+                Set.of(MedicalEquipment.DEFIBRILLATOR));
 
         assertEquals(20.5, score);
     }

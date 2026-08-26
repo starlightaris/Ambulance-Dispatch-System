@@ -26,8 +26,7 @@ public class FitnessEvaluator {
         this.routeService = routeService;
     }
 
-    public double calculateFitness(Ambulance ambulance, String patientNodeName, Set<MedicalEquipment> requiredEquipment,
-                                   List<RoadNode> allNodes) {
+    public double calculateFitness(Ambulance ambulance, String patientNodeName, Set<MedicalEquipment> requiredEquipment) {
 
         // An ambulance with no recorded position has no vertex to route from, and a call
         // with no location has no destination.
@@ -35,26 +34,10 @@ public class FitnessEvaluator {
             return UNREACHABLE;
         }
 
-        Long ambulanceNodeId = null;
-        Long patientNodeId = null;
-
-        for (RoadNode node : allNodes) {
-            if (node.getName().equals(ambulance.getCurrentLocationNode())) {
-                ambulanceNodeId = node.getId();
-            }
-            if (node.getName().equals(patientNodeName)) {
-                patientNodeId = node.getId();
-            }
-        }
-
-        if (ambulanceNodeId == null || patientNodeId == null) {
-            return UNREACHABLE;
-        }
-
         double travelTime;
         try {
             // 1. Real Distance Check using the routing module
-            RouteResponse response = routeService.findRoute(ambulanceNodeId, patientNodeId);
+            RouteResponse response = routeService.findRoute(ambulance.getCurrentLocationNode(), patientNodeName);
             travelTime = response.getTotalTravelTimeMinutes();
         } catch (IllegalStateException | IllegalArgumentException e) {
             // The routing module throws an exception if no route is found or node is invalid

@@ -118,6 +118,10 @@ class GreedySchedulerRoutingTest {
         RouteService counting = new RouteService() {
             @Override
             public RouteResponse findRoute(Long startId, Long endId) {
+                return null;
+            }
+            @Override
+            public RouteResponse findRoute(String start, String end) {
                 runs[0]++;
                 RouteResponse res = new RouteResponse();
                 res.setTotalTravelTimeMinutes(10.0);
@@ -147,6 +151,10 @@ class GreedySchedulerRoutingTest {
             Long id = inv.getArgument(0);
             return allNodes.stream().filter(n -> n.getId().equals(id)).findFirst();
         });
+        when(roadNodeRepository.findByName(Mockito.any())).thenAnswer(inv -> {
+            String name = inv.getArgument(0);
+            return allNodes.stream().filter(n -> n.getName().equals(name)).findFirst();
+        });
         when(roadEdgeRepository.findByBlockedFalse()).thenAnswer(inv -> 
             allEdges.stream().filter(e -> !e.isBlocked()).toList()
         );
@@ -161,7 +169,7 @@ class GreedySchedulerRoutingTest {
         when(ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE)).thenReturn(available);
         when(roadNodeRepository.findAll()).thenReturn(allNodes);
 
-        return new GreedyScheduler(ambulanceRepository, new FitnessEvaluator(routeService), roadNodeRepository);
+        return new GreedyScheduler(ambulanceRepository, new FitnessEvaluator(routeService));
     }
 
     private RoadNode node(Long id, String name) {

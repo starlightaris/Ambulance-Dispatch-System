@@ -28,41 +28,32 @@ class GreedySchedulerTest {
 
     @BeforeEach
     void setUp() {
-        // 1. Create mock (fake) versions of all 4 dependencies
         ambulanceRepository = Mockito.mock(AmbulanceRepository.class);
-        fitnessEvaluator = Mockito.mock(FitnessEvaluator.class);
-        roadNodeRepository = Mockito.mock(RoadNodeRepository.class);
+        com.ambulance.dispatch_system.routing.service.RouteService routeService = Mockito.mock(com.ambulance.dispatch_system.routing.service.RouteService.class);
+        fitnessEvaluator = new FitnessEvaluator(routeService);
+        greedyScheduler = new GreedyScheduler(ambulanceRepository, fitnessEvaluator);
+
+        // Tell the mock evaluator to give AMB-01 a better score.
+        com.ambulance.dispatch_system.routing.dto.RouteResponse res1 = new com.ambulance.dispatch_system.routing.dto.RouteResponse("ASTAR", 10.0, 5.0, List.of());
+        com.ambulance.dispatch_system.routing.dto.RouteResponse res2 = new com.ambulance.dispatch_system.routing.dto.RouteResponse("ASTAR", 25.0, 10.0, List.of());
         
-        // 2. Inject all 3 into your scheduler
-        greedyScheduler = new GreedyScheduler(
-                ambulanceRepository, fitnessEvaluator, roadNodeRepository
-        );
+        when(routeService.findRoute("Node_B", "Node_A")).thenReturn(res1);
+        when(routeService.findRoute("Node_C", "Node_A")).thenReturn(res2);
     }
 
     @Test
     void testFindBestAmbulance_Success() {
-        // Setup Fake Ambulances
         Ambulance amb1 = new Ambulance();
         amb1.setVehicleNumber("AMB-01");
         amb1.setEquipment(Set.of(MedicalEquipment.ECG_MONITOR));
+        amb1.setCurrentLocationNode("Node_B");
 
         Ambulance amb2 = new Ambulance();
         amb2.setVehicleNumber("AMB-02");
         amb2.setEquipment(Set.of(MedicalEquipment.ECG_MONITOR, MedicalEquipment.DEFIBRILLATOR));
+        amb2.setCurrentLocationNode("Node_C");
 
-        // Tell the mock databases what to return
         when(ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE)).thenReturn(List.of(amb1, amb2));
-        when(roadNodeRepository.findAll()).thenReturn(List.of()); // Fake empty map
-        
-        // Tell the mock evaluator to give AMB-01 a better score. 
-        // Note: When using Mockito, we must use eq() and anyList() to handle the new arguments.
-        when(fitnessEvaluator.calculateFitness(
-                eq(amb1), eq("Node_A"), eq(Set.of(MedicalEquipment.ECG_MONITOR)), anyList())
-        ).thenReturn(10.0);
-        
-        when(fitnessEvaluator.calculateFitness(
-                eq(amb2), eq("Node_A"), eq(Set.of(MedicalEquipment.ECG_MONITOR)), anyList())
-        ).thenReturn(25.0);
 
         // Run the method
         Optional<Ambulance> result = greedyScheduler.findBestAmbulance("Node_A", Set.of(MedicalEquipment.ECG_MONITOR));

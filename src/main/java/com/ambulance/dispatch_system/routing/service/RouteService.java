@@ -18,4 +18,11 @@ public interface RouteService {
     RouteResponse findRoute(
             Long startLocationId,
             Long destinationLocationId);
+
+    /**
+     * Finds the best available route between two locations by their node names.
+     */
+    RouteResponse findRoute(
+            String startNodeName,
+            String destinationNodeName);
 }

@@ -92,6 +92,16 @@ public class RouteServiceImpl implements RouteService {
         );
     }
 
+    @Override
+    public RouteResponse findRoute(String startNodeName, String destinationNodeName) {
+        RoadNode start = roadNodeRepository.findByName(startNodeName)
+                .orElseThrow(() -> new IllegalArgumentException("Start location not found"));
+        RoadNode destination = roadNodeRepository.findByName(destinationNodeName)
+                .orElseThrow(() -> new IllegalArgumentException("Destination location not found"));
+        
+        return findRoute(start.getId(), destination.getId());
+    }
+
     private double calculateTravelTime(
             List<RoadNode> route,
             List<RoadEdge> edges) {
