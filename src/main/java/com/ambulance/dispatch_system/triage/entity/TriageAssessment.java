@@ -1,5 +1,6 @@
 package com.ambulance.dispatch_system.triage.entity;
 
+import com.ambulance.dispatch_system.common.entity.Patient;
 import com.ambulance.dispatch_system.triage.model.enums.ConsciousnessLevel;
 import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
 import jakarta.persistence.*;
@@ -27,6 +28,14 @@ public class TriageAssessment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "patient_id",
+            nullable = false,
+            foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT)
+    )
+    private Patient patient;
 
     @Column(nullable = false)
     private Boolean breathing;
@@ -120,6 +129,14 @@ public class TriageAssessment {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public Patient getPatient() {
+        return patient;
+    }
+
+    public void setPatient(Patient patient) {
+        this.patient = patient;
     }
 
     public Boolean getBreathing() {

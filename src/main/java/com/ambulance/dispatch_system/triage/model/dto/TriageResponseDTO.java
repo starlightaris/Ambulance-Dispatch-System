@@ -2,6 +2,7 @@ package com.ambulance.dispatch_system.triage.model.dto;
 
 import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Data Transfer Object used to return the result of a triage assessment.
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
  */
 public class TriageResponseDTO {
 
+    private UUID id;
     private TriageCategory category;
     private Double score;
     private Integer queuePosition;
@@ -25,21 +27,32 @@ public class TriageResponseDTO {
     /**
      * Creates a response containing the calculated triage information.
      *
+     * @param id assessment identifier
      * @param category assigned triage category
      * @param score calculated triage score
      * @param queuePosition patient's position in the triage queue
      * @param timestamp time when the triage result was generated
      */
     public TriageResponseDTO(
+            UUID id,
             TriageCategory category,
             Double score,
             Integer queuePosition,
             LocalDateTime timestamp) {
 
+        this.id = id;
         this.category = category;
         this.score = score;
         this.queuePosition = queuePosition;
         this.timestamp = timestamp;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
     }
 
     public TriageCategory getCategory() {

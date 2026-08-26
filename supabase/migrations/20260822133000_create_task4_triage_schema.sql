@@ -5,6 +5,7 @@ create schema if not exists task4;
 
 create table if not exists task4.triage_assessments (
     id uuid primary key default gen_random_uuid(),
+    patient_id bigint not null,
     breathing boolean not null,
     pulse_rate integer not null check (pulse_rate between 0 and 300),
     avpu varchar(16) not null check (avpu in ('ALERT', 'VOICE', 'PAIN', 'UNRESPONSIVE')),
@@ -22,6 +23,10 @@ create table if not exists task4.triage_assessments (
     severity_rank integer not null check (severity_rank between 1 and 5)
 );
 
+-- Also upgrades installations where the Task 4 table already existed.
+alter table task4.triage_assessments
+    add column if not exists patient_id bigint;
+
 create table if not exists task4.triage_assessment_symptoms (
     assessment_id uuid not null
         references task4.triage_assessments(id) on delete cascade,
@@ -37,6 +42,9 @@ create index if not exists idx_triage_active_queue
         tie_breaker_score desc,
         created_at asc
     );
+
+create index if not exists idx_triage_assessment_patient
+    on task4.triage_assessments (patient_id);
 
 create index if not exists idx_triage_symptoms_assessment
     on task4.triage_assessment_symptoms (assessment_id);

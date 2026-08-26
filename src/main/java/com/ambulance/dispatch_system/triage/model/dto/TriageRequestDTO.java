@@ -15,6 +15,10 @@ import java.util.List;
  */
 public class TriageRequestDTO {
 
+    /** ID of the shared patient record whose urgency is updated by triage. */
+    @NotNull
+    private Long patientId;
+
     @NotNull
     private Boolean breathing;
 
@@ -60,6 +64,14 @@ public class TriageRequestDTO {
      * Default constructor required for DTO deserialization.
      */
     public TriageRequestDTO() {
+    }
+
+    public Long getPatientId() {
+        return patientId;
+    }
+
+    public void setPatientId(Long patientId) {
+        this.patientId = patientId;
     }
 
     /**

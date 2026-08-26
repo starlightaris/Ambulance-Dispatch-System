@@ -2,6 +2,8 @@
 
 Task 4 stores triage assessments in the private `task4` PostgreSQL schema. No
 tables belonging to Tasks 1, 2, 3, or 5 are created or changed by this setup.
+Each assessment stores the shared patient ID; the service updates that patient's
+`urgencyLevel` in the same transaction as the assessment.
 
 ## Setup
 
@@ -19,8 +21,9 @@ the database URL or password.
 
 ## Task 4 tables
 
-- `task4.triage_assessments` stores patient inputs, the assigned MTS category,
-  weighted score, queue severity, creation time, and resolution state.
+- `task4.triage_assessments` links to a patient and stores the clinical inputs,
+  assigned MTS category, weighted score, queue severity, creation time, and
+  resolution state.
 - `task4.triage_assessment_symptoms` stores the ordered symptoms for each
   assessment and deletes them automatically when the assessment is deleted.
 
