@@ -51,7 +51,7 @@ class TriageControllerIntegrationTest {
     }
 
     @Autowired
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private tools.jackson.databind.ObjectMapper objectMapper;
 
     @Test
     void testEvaluateReturnsCorrectQueuePosition() throws Exception {
