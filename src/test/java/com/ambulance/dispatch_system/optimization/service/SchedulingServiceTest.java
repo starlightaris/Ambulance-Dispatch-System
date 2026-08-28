@@ -74,7 +74,7 @@ class SchedulingServiceTest {
 
     @Test
     void rejectsAWeekStartingThatIsNotAMonday() {
-        ScheduleRunRequest request = new ScheduleRunRequest(LocalDate.of(2024, 1, 2), AlgorithmType.GREEDY, null, null, null, false);
+        ScheduleRunRequest request = new ScheduleRunRequest(LocalDate.of(2024, 1, 2), AlgorithmType.GENETIC_ALGORITHM, null, null, null, false);
 
         assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
     }
@@ -82,7 +82,7 @@ class SchedulingServiceTest {
     @Test
     void rejectsWhenNoShiftSlotsAreDefined() {
         when(shiftSlotRepository.findAll()).thenReturn(List.of());
-        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GREEDY, null, null, null, false);
+        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GENETIC_ALGORITHM, null, null, null, false);
 
         assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
     }
@@ -91,7 +91,7 @@ class SchedulingServiceTest {
     void rejectsWhenNoStaffAreAvailable() {
         when(shiftSlotRepository.findAll()).thenReturn(List.of(slot()));
         when(staffRepository.findAll()).thenReturn(List.of());
-        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GREEDY, null, null, null, false);
+        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GENETIC_ALGORITHM, null, null, null, false);
 
         assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
     }
@@ -106,16 +106,25 @@ class SchedulingServiceTest {
     }
 
     @Test
+    void rejectsGreedyAlgorithmOnTheRunEndpoint() {
+        when(shiftSlotRepository.findAll()).thenReturn(List.of(slot()));
+        when(staffRepository.findAll()).thenReturn(List.of(staff("Alice")));
+        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GREEDY, null, null, null, false);
+
+        assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
-    void greedyRunPersistsTheResultingRosterByDefault() {
+    void gaRunPersistsTheResultingRosterByDefault() {
         when(shiftSlotRepository.findAll()).thenReturn(List.of(slot()));
         when(staffRepository.findAll()).thenReturn(List.of(staff("Alice")));
         when(shiftRepository.findByWeekStarting(MONDAY)).thenReturn(List.of());
 
-        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GREEDY, null, null, null, null);
+        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GENETIC_ALGORITHM, null, null, null, null);
         ScheduleRunResponse response = schedulingService.run(request);
 
-        assertEquals("Greedy", response.algorithmName());
+        assertEquals("Genetic Algorithm", response.algorithmName());
 
         ArgumentCaptor<List<Shift>> captor = ArgumentCaptor.forClass(List.class);
         verify(shiftRepository).saveAll(captor.capture());
@@ -128,7 +137,7 @@ class SchedulingServiceTest {
         when(shiftSlotRepository.findAll()).thenReturn(List.of(slot()));
         when(staffRepository.findAll()).thenReturn(List.of(staff("Alice")));
 
-        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GREEDY, null, null, null, false);
+        ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GENETIC_ALGORITHM, null, null, null, false);
         ScheduleRunResponse response = schedulingService.run(request);
 
         assertEquals(1, response.assignments().size());
