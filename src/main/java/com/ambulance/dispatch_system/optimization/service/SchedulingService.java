@@ -14,7 +14,7 @@ import com.ambulance.dispatch_system.optimization.dto.ShiftDto;
 import com.ambulance.dispatch_system.optimization.fitness.FitnessWeights;
 import com.ambulance.dispatch_system.optimization.ga.GAParameters;
 import com.ambulance.dispatch_system.optimization.ga.GeneticAlgorithmScheduler;
-import com.ambulance.dispatch_system.optimization.greedy.GreedyScheduler;
+import com.ambulance.dispatch_system.optimization.greedy.GreedyRosterScheduler;
 import com.ambulance.dispatch_system.optimization.model.RosterChromosome;
 import com.ambulance.dispatch_system.optimization.model.SchedulingProblem;
 import com.ambulance.dispatch_system.optimization.model.SchedulingResult;
@@ -32,7 +32,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 /**
  * Orchestrates the Optimization Module end to end: loads Staff and
  * ShiftSlot data from the database, runs the requested scheduling
- * algorithm(s) (see GeneticAlgorithmScheduler / GreedyScheduler), and
+ * algorithm(s) (see GeneticAlgorithmScheduler / GreedyRosterScheduler), and
  * persists the winning roster as Shift rows.
  */
 @Service
@@ -76,7 +76,7 @@ public class SchedulingService {
         FitnessWeights weights = resolveWeights(request);
 
         SchedulingResult gaResult = runGeneticAlgorithm(problem, request, weights);
-        SchedulingResult greedyResult = new GreedyScheduler(problem, weights).run();
+        SchedulingResult greedyResult = new GreedyRosterScheduler(problem, weights).run();
 
         return new ScheduleComparisonResponse(
                 toResponse(gaResult, problem, false),

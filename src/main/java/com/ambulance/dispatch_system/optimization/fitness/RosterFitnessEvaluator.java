@@ -33,11 +33,11 @@ import java.util.Map;
  * n log n when one staff member holds all n seats). Overall O(n log n)
  * per evaluation.
  */
-public class FitnessEvaluator {
+public class RosterFitnessEvaluator {
 
     private final FitnessWeights weights;
 
-    public FitnessEvaluator(FitnessWeights weights) {
+    public RosterFitnessEvaluator(FitnessWeights weights) {
         this.weights = weights;
     }
 
