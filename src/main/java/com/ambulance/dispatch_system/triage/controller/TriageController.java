@@ -4,10 +4,11 @@ import com.ambulance.dispatch_system.triage.dto.TriageRequestDTO;
 import com.ambulance.dispatch_system.triage.dto.TriageResponseDTO;
 import com.ambulance.dispatch_system.triage.service.TriageService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,7 +18,7 @@ import java.util.UUID;
  * and resolving completed triage cases.
  */
 @RestController
-@RequestMapping("/api/v1/triage")
+@RequestMapping("/api/v1/triage/assessments")
 public class TriageController {
 
     private final TriageService triageService;
@@ -27,18 +28,20 @@ public class TriageController {
     }
 
     /**
-     * Evaluates a new triage request and adds it to the triage queue.
+     * Evaluates a new triage request, creating an assessment and adding it to the triage queue.
      *
      * @param request patient triage information
      * @return generated triage response
      */
-    @PostMapping("/evaluate")
+    @PostMapping
     public ResponseEntity<TriageResponseDTO> evaluate(
             @Valid @RequestBody TriageRequestDTO request) {
 
         TriageResponseDTO response = triageService.evaluate(request);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(response.getId()).toUri();
+        return ResponseEntity.created(location).body(response);
     }
 
     /**
