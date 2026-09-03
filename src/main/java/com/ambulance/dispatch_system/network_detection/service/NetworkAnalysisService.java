@@ -9,6 +9,7 @@ import com.ambulance.dispatch_system.network_detection.optimization.DijkstraBlin
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,17 @@ public class NetworkAnalysisService {
     }
 
     public List<RoadNode> findBlindSpots(double thresholdMinutes) {
+        return computeReachability().blindSpots(thresholdMinutes);
+    }
+
+    /**
+     * Loads the road network and runs one multi-source Dijkstra pass from every available
+     * ambulance base, without applying a threshold. Callers that need to check several
+     * thresholds (see NetworkCoverageStatsService) should call this once and filter the result
+     * repeatedly, rather than calling findBlindSpots per threshold - each of those calls would
+     * otherwise re-fetch the whole road network and re-run the traversal from scratch.
+     */
+    public NetworkReachability computeReachability() {
         var allNodes = nodeRepository.findAll();
         var allEdges = edgeRepository.findAll();
 
@@ -40,6 +52,7 @@ public class NetworkAnalysisService {
                 .filter(nodeName -> nodeName != null && !nodeName.isBlank())
                 .collect(Collectors.toSet());
 
-        return blindSpotOptimizer.computeBlindSpots(allNodes, allEdges, baseNodeNames, thresholdMinutes);
+        Map<Long, Double> minTravelTimes = blindSpotOptimizer.computeMinTravelTimes(allNodes, allEdges, baseNodeNames);
+        return new NetworkReachability(allNodes, minTravelTimes);
     }
 }

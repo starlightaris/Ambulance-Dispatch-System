@@ -6,6 +6,7 @@ import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
 import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
+import com.ambulance.dispatch_system.routing.service.RoutingSnapshot;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -27,13 +28,18 @@ public class GreedyScheduler {
     public Optional<Ambulance> findBestAmbulance(String patientNode, Set<MedicalEquipment> requiredEquipment) {
         List<Ambulance> availableAmbulances = ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE);
 
+        // Load the road network once for this whole dispatch decision. Scoring each candidate
+        // through FitnessEvaluator's routeService-backed overload would otherwise re-fetch the
+        // full edge list from the database on every single ambulance instead of once overall.
+        RoutingSnapshot routingSnapshot = fitnessEvaluator.newRoutingSnapshot();
+
         // Score each candidate exactly once. Comparing with Comparator.comparingDouble over
         // calculateFitness would re-run the shortest-path search on both sides of every
         // comparison, so a fleet of n ambulances cost roughly 2n graph traversals.
         return availableAmbulances.stream()
                 .filter(amb -> amb.getEquipment().containsAll(requiredEquipment))
                 .map(amb -> new ScoredAmbulance(amb, fitnessEvaluator.calculateFitness(
-                        amb, patientNode, requiredEquipment)))
+                        amb, patientNode, requiredEquipment, routingSnapshot)))
                 .filter(scored -> scored.score() < FitnessEvaluator.UNREACHABLE)
                 .min(Comparator.comparingDouble(ScoredAmbulance::score))
                 .map(ScoredAmbulance::ambulance);
