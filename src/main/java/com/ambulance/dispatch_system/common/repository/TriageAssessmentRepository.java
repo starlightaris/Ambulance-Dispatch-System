@@ -1,6 +1,6 @@
-package com.ambulance.dispatch_system.triage.repository;
+package com.ambulance.dispatch_system.common.repository;
 
-import com.ambulance.dispatch_system.triage.entity.TriageAssessment;
+import com.ambulance.dispatch_system.common.entity.TriageAssessment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

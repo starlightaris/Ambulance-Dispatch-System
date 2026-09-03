@@ -1,7 +1,7 @@
 package com.ambulance.dispatch_system.triage.controller;
 
-import com.ambulance.dispatch_system.triage.model.dto.TriageRequestDTO;
-import com.ambulance.dispatch_system.triage.model.dto.TriageResponseDTO;
+import com.ambulance.dispatch_system.triage.dto.TriageRequestDTO;
+import com.ambulance.dispatch_system.triage.dto.TriageResponseDTO;
 import com.ambulance.dispatch_system.triage.service.TriageService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
