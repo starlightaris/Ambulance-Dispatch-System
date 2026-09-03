@@ -49,19 +49,18 @@ public class SchedulingService {
         this.shiftRepository = shiftRepository;
     }
 
-    /** Runs a single algorithm (GA by default) and, unless the request opts out, persists the resulting roster. */
+    /** Runs the Genetic Algorithm and, unless the request opts out, persists the resulting roster. */
     public ScheduleRunResponse run(ScheduleRunRequest request) {
         SchedulingProblem problem = buildProblem(request.weekStarting());
         FitnessWeights weights = resolveWeights(request);
         AlgorithmType algorithm = request.algorithmOrDefault();
 
-        if (algorithm == AlgorithmType.BOTH) {
-            throw new ResponseStatusException(BAD_REQUEST, "Use /compare to run both algorithms at once");
+        if (algorithm != AlgorithmType.GENETIC_ALGORITHM) {
+            throw new ResponseStatusException(BAD_REQUEST,
+                    "Use /compare to see the Greedy baseline - /run only executes the Genetic Algorithm");
         }
 
-        SchedulingResult result = algorithm == AlgorithmType.GREEDY
-                ? new GreedyScheduler(problem, weights).run()
-                : runGeneticAlgorithm(problem, request, weights);
+        SchedulingResult result = runGeneticAlgorithm(problem, request, weights);
 
         boolean persisted = request.shouldPersist();
         if (persisted) {

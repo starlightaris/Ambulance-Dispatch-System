@@ -35,7 +35,7 @@ public class SchedulingController {
         this.schedulingService = schedulingService;
     }
 
-    /** Runs one algorithm (GA by default) and, unless persist=false, saves the resulting roster. */
+    /** Runs the Genetic Algorithm and, unless persist=false, saves the resulting roster. */
     @PostMapping("/run")
     public ScheduleRunResponse run(@Valid @RequestBody ScheduleRunRequest request) {
         return schedulingService.run(request);
