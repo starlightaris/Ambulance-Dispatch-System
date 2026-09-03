@@ -5,6 +5,7 @@ import com.ambulance.dispatch_system.common.entity.RoadNode;
 import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
 import com.ambulance.dispatch_system.routing.dto.RouteResponse;
 import com.ambulance.dispatch_system.routing.service.RouteService;
+import com.ambulance.dispatch_system.routing.service.RoutingSnapshot;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -27,6 +28,19 @@ public class FitnessEvaluator {
     }
 
     public double calculateFitness(Ambulance ambulance, String patientNodeName, Set<MedicalEquipment> requiredEquipment) {
+        // Single one-off scoring call: route straight through RouteService, same as before.
+        return calculateFitness(ambulance, patientNodeName, requiredEquipment, routeService::findRoute);
+    }
+
+    /**
+     * Scores one ambulance against an already-loaded {@link RoutingSnapshot} instead of going
+     * through RouteService directly. Callers scoring a whole fleet in one dispatch decision
+     * (see GreedyScheduler) should load a single snapshot up front and reuse it across every
+     * candidate, rather than letting each call trigger its own fresh database fetch of the full
+     * road network.
+     */
+    public double calculateFitness(Ambulance ambulance, String patientNodeName, Set<MedicalEquipment> requiredEquipment,
+                                    RoutingSnapshot routingSnapshot) {
 
         // An ambulance with no recorded position has no vertex to route from, and a call
         // with no location has no destination.
@@ -37,7 +51,7 @@ public class FitnessEvaluator {
         double travelTime;
         try {
             // 1. Real Distance Check using the routing module
-            RouteResponse response = routeService.findRoute(ambulance.getCurrentLocationNode(), patientNodeName);
+            RouteResponse response = routingSnapshot.findRoute(ambulance.getCurrentLocationNode(), patientNodeName);
             travelTime = response.getTotalTravelTimeMinutes();
         } catch (IllegalStateException | IllegalArgumentException e) {
             // The routing module throws an exception if no route is found or node is invalid
@@ -53,5 +67,13 @@ public class FitnessEvaluator {
         }
 
         return score;
+    }
+
+    /**
+     * Loads a reusable road-network snapshot for scoring an entire fleet in one dispatch
+     * decision. See {@link RouteService#loadSnapshot()}.
+     */
+    public RoutingSnapshot newRoutingSnapshot() {
+        return routeService.loadSnapshot();
     }
 }
