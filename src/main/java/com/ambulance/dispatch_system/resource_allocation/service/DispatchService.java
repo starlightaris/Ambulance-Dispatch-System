@@ -10,6 +10,7 @@ import com.ambulance.dispatch_system.resource_allocation.optimization.GreedySche
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -19,9 +20,9 @@ public class DispatchService {
     private final AmbulanceRepository ambulanceRepository;
     private final GreedyScheduler greedyScheduler;
 
-    public DispatchService(CallRepository callRepository, 
-                           AmbulanceRepository ambulanceRepository, 
-                           GreedyScheduler greedyScheduler) {
+    public DispatchService(CallRepository callRepository,
+            AmbulanceRepository ambulanceRepository,
+            GreedyScheduler greedyScheduler) {
         this.callRepository = callRepository;
         this.ambulanceRepository = ambulanceRepository;
         this.greedyScheduler = greedyScheduler;
@@ -33,25 +34,31 @@ public class DispatchService {
                 .orElseThrow(() -> new RuntimeException("Call not found with ID: " + callId));
 
         Optional<Ambulance> bestAmbulanceOpt = greedyScheduler.findBestAmbulance(
-                call.getLocationNode(), 
-                call.getRequiredEquipment()
-        );
+                call.getLocationNode(),
+                call.getRequiredEquipment());
 
         if (bestAmbulanceOpt.isEmpty()) {
             return "No suitable ambulance available at this time.";
         }
 
         Ambulance bestAmbulance = bestAmbulanceOpt.get();
-        
+
         call.setAssignedAmbulance(bestAmbulance);
-        call.setStatus(CallStatus.DISPATCHED); 
-        
-        // Updated to use your new enum value
+        call.setStatus(CallStatus.DISPATCHED);
+
         bestAmbulance.setStatus(AmbulanceStatus.DISPATCHED);
 
         ambulanceRepository.save(bestAmbulance);
         callRepository.save(call);
 
         return "Ambulance " + bestAmbulance.getVehicleNumber() + " dispatched successfully.";
+    }
+
+    public List<Call> getPendingCalls() {
+        return callRepository.findByStatus(CallStatus.RECEIVED);
+    }
+
+    public List<Ambulance> getAllAmbulances() {
+        return ambulanceRepository.findAll();
     }
 }
