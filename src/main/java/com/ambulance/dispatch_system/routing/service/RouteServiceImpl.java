@@ -15,6 +15,8 @@ import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
 import com.ambulance.dispatch_system.routing.algorithm.AStarAlgorithm;
 import com.ambulance.dispatch_system.routing.dto.RouteRequest;
 import com.ambulance.dispatch_system.routing.dto.RouteResponse;
+import com.ambulance.dispatch_system.routing.exception.LocationNotFoundException;
+import com.ambulance.dispatch_system.routing.exception.RouteNotFoundException;
 
 @Service
 public class RouteServiceImpl implements RouteService {
@@ -55,13 +57,13 @@ public class RouteServiceImpl implements RouteService {
         RoadNode start = roadNodeRepository
                 .findById(startLocationId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new LocationNotFoundException(
                                 "Start location not found"));
 
         RoadNode destination = roadNodeRepository
                 .findById(destinationLocationId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new LocationNotFoundException(
                                 "Destination location not found"));
 
         List<RoadEdge> availableEdges =
@@ -73,9 +75,9 @@ public class RouteServiceImpl implements RouteService {
     @Override
     public RouteResponse findRoute(String startNodeName, String destinationNodeName) {
         RoadNode start = roadNodeRepository.findByName(startNodeName)
-                .orElseThrow(() -> new IllegalArgumentException("Start location not found"));
+                .orElseThrow(() -> new LocationNotFoundException("Start location not found"));
         RoadNode destination = roadNodeRepository.findByName(destinationNodeName)
-                .orElseThrow(() -> new IllegalArgumentException("Destination location not found"));
+                .orElseThrow(() -> new LocationNotFoundException("Destination location not found"));
 
         List<RoadEdge> availableEdges = roadEdgeRepository.findByBlockedFalse();
 
@@ -97,11 +99,11 @@ public class RouteServiceImpl implements RouteService {
         return (startNodeName, destinationNodeName) -> {
             RoadNode start = nodesByName.get(startNodeName);
             if (start == null) {
-                throw new IllegalArgumentException("Start location not found");
+                throw new LocationNotFoundException("Start location not found");
             }
             RoadNode destination = nodesByName.get(destinationNodeName);
             if (destination == null) {
-                throw new IllegalArgumentException("Destination location not found");
+                throw new LocationNotFoundException("Destination location not found");
             }
             return computeRoute(start, destination, edges, edgeLookup);
         };
@@ -121,7 +123,7 @@ public class RouteServiceImpl implements RouteService {
         List<RoadNode> route = aStarAlgorithm.findShortestPath(start, destination, edges);
 
         if (route.isEmpty()) {
-            throw new IllegalStateException(
+            throw new RouteNotFoundException(
                     "No available route found between the selected locations");
         }
 

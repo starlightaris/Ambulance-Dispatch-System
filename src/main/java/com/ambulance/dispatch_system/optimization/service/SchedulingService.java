@@ -11,6 +11,7 @@ import com.ambulance.dispatch_system.optimization.dto.ScheduleComparisonResponse
 import com.ambulance.dispatch_system.optimization.dto.ScheduleRunRequest;
 import com.ambulance.dispatch_system.optimization.dto.ScheduleRunResponse;
 import com.ambulance.dispatch_system.optimization.dto.ShiftDto;
+import com.ambulance.dispatch_system.optimization.exception.InvalidScheduleRequestException;
 import com.ambulance.dispatch_system.optimization.fitness.FitnessWeights;
 import com.ambulance.dispatch_system.optimization.ga.GAParameters;
 import com.ambulance.dispatch_system.optimization.ga.GeneticAlgorithmScheduler;
@@ -19,15 +20,12 @@ import com.ambulance.dispatch_system.optimization.model.RosterChromosome;
 import com.ambulance.dispatch_system.optimization.model.SchedulingProblem;
 import com.ambulance.dispatch_system.optimization.model.SchedulingResult;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
  * Orchestrates the Optimization Module end to end: loads Staff and
@@ -56,7 +54,7 @@ public class SchedulingService {
         AlgorithmType algorithm = request.algorithmOrDefault();
 
         if (algorithm != AlgorithmType.GENETIC_ALGORITHM) {
-            throw new ResponseStatusException(BAD_REQUEST,
+            throw new InvalidScheduleRequestException(
                     "Use /compare to see the Greedy baseline - /run only executes the Genetic Algorithm");
         }
 
@@ -104,17 +102,17 @@ public class SchedulingService {
 
     private SchedulingProblem buildProblem(LocalDate weekStarting) {
         if (weekStarting.getDayOfWeek() != DayOfWeek.MONDAY) {
-            throw new ResponseStatusException(BAD_REQUEST, "weekStarting must be a Monday");
+            throw new InvalidScheduleRequestException("weekStarting must be a Monday");
         }
 
         List<ShiftSlot> shiftSlots = shiftSlotRepository.findAll();
         if (shiftSlots.isEmpty()) {
-            throw new ResponseStatusException(BAD_REQUEST, "No ShiftSlots defined - create the roster template first");
+            throw new InvalidScheduleRequestException("No ShiftSlots defined - create the roster template first");
         }
 
         List<Staff> staff = staffRepository.findAll();
         if (staff.isEmpty()) {
-            throw new ResponseStatusException(BAD_REQUEST, "No Staff available to schedule");
+            throw new InvalidScheduleRequestException("No Staff available to schedule");
         }
 
         return new SchedulingProblem(SchedulingProblem.expand(shiftSlots), staff, weekStarting);

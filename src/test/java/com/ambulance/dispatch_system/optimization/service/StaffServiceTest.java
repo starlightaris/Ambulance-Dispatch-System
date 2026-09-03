@@ -4,12 +4,12 @@ import com.ambulance.dispatch_system.common.entity.Staff;
 import com.ambulance.dispatch_system.common.entity.enums.StaffRole;
 import com.ambulance.dispatch_system.common.repository.StaffRepository;
 import com.ambulance.dispatch_system.optimization.dto.StaffDto;
+import com.ambulance.dispatch_system.optimization.exception.StaffNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 import java.util.Set;
@@ -50,14 +50,14 @@ class StaffServiceTest {
     void findByIdThrowsNotFoundWhenMissing() {
         when(staffRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResponseStatusException.class, () -> staffService.findById(99L));
+        assertThrows(StaffNotFoundException.class, () -> staffService.findById(99L));
     }
 
     @Test
     void deleteThrowsNotFoundWhenMissingAndNeverCallsDeleteById() {
         when(staffRepository.existsById(99L)).thenReturn(false);
 
-        assertThrows(ResponseStatusException.class, () -> staffService.delete(99L));
+        assertThrows(StaffNotFoundException.class, () -> staffService.delete(99L));
         verify(staffRepository, never()).deleteById(any());
     }
 }

@@ -6,6 +6,7 @@ import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
 import com.ambulance.dispatch_system.common.entity.enums.CallStatus;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.CallRepository;
+import com.ambulance.dispatch_system.resource_allocation.exception.CallNotFoundException;
 import com.ambulance.dispatch_system.resource_allocation.optimization.GreedyScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,7 @@ public class DispatchService {
     @Transactional
     public String handleEmergencyDispatch(Long callId) {
         Call call = callRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found with ID: " + callId));
+                .orElseThrow(() -> new CallNotFoundException(callId));
 
         Optional<Ambulance> bestAmbulanceOpt = greedyScheduler.findBestAmbulance(
                 call.getLocationNode(), 

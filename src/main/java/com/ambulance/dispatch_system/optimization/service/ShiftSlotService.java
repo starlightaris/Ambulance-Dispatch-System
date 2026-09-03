@@ -3,12 +3,10 @@ package com.ambulance.dispatch_system.optimization.service;
 import com.ambulance.dispatch_system.common.entity.ShiftSlot;
 import com.ambulance.dispatch_system.common.repository.ShiftSlotRepository;
 import com.ambulance.dispatch_system.optimization.dto.ShiftSlotDto;
+import com.ambulance.dispatch_system.optimization.exception.ShiftSlotNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /** Thin CRUD service over ShiftSlot - the recurring weekly coverage template the scheduling algorithms fill. */
 @Service
@@ -40,13 +38,13 @@ public class ShiftSlotService {
 
     public void delete(Long id) {
         if (!shiftSlotRepository.existsById(id)) {
-            throw new ResponseStatusException(NOT_FOUND, "ShiftSlot " + id + " not found");
+            throw new ShiftSlotNotFoundException(id);
         }
         shiftSlotRepository.deleteById(id);
     }
 
     private ShiftSlot getOrThrow(Long id) {
         return shiftSlotRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "ShiftSlot " + id + " not found"));
+                .orElseThrow(() -> new ShiftSlotNotFoundException(id));
     }
 }

@@ -11,13 +11,13 @@ import com.ambulance.dispatch_system.optimization.dto.AlgorithmType;
 import com.ambulance.dispatch_system.optimization.dto.ScheduleComparisonResponse;
 import com.ambulance.dispatch_system.optimization.dto.ScheduleRunRequest;
 import com.ambulance.dispatch_system.optimization.dto.ScheduleRunResponse;
+import com.ambulance.dispatch_system.optimization.exception.InvalidScheduleRequestException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -76,7 +76,7 @@ class SchedulingServiceTest {
     void rejectsAWeekStartingThatIsNotAMonday() {
         ScheduleRunRequest request = new ScheduleRunRequest(LocalDate.of(2024, 1, 2), AlgorithmType.GENETIC_ALGORITHM, null, null, null, false);
 
-        assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
+        assertThrows(InvalidScheduleRequestException.class, () -> schedulingService.run(request));
     }
 
     @Test
@@ -84,7 +84,7 @@ class SchedulingServiceTest {
         when(shiftSlotRepository.findAll()).thenReturn(List.of());
         ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GENETIC_ALGORITHM, null, null, null, false);
 
-        assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
+        assertThrows(InvalidScheduleRequestException.class, () -> schedulingService.run(request));
     }
 
     @Test
@@ -93,7 +93,7 @@ class SchedulingServiceTest {
         when(staffRepository.findAll()).thenReturn(List.of());
         ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GENETIC_ALGORITHM, null, null, null, false);
 
-        assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
+        assertThrows(InvalidScheduleRequestException.class, () -> schedulingService.run(request));
     }
 
     @Test
@@ -102,7 +102,7 @@ class SchedulingServiceTest {
         when(staffRepository.findAll()).thenReturn(List.of(staff("Alice")));
         ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.BOTH, null, null, null, false);
 
-        assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
+        assertThrows(InvalidScheduleRequestException.class, () -> schedulingService.run(request));
     }
 
     @Test
@@ -111,7 +111,7 @@ class SchedulingServiceTest {
         when(staffRepository.findAll()).thenReturn(List.of(staff("Alice")));
         ScheduleRunRequest request = new ScheduleRunRequest(MONDAY, AlgorithmType.GREEDY, null, null, null, false);
 
-        assertThrows(ResponseStatusException.class, () -> schedulingService.run(request));
+        assertThrows(InvalidScheduleRequestException.class, () -> schedulingService.run(request));
     }
 
     @Test
