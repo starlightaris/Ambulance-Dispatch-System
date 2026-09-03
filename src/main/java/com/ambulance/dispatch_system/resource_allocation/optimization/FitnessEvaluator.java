@@ -4,6 +4,8 @@ import com.ambulance.dispatch_system.common.entity.Ambulance;
 import com.ambulance.dispatch_system.common.entity.RoadNode;
 import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
 import com.ambulance.dispatch_system.routing.dto.RouteResponse;
+import com.ambulance.dispatch_system.routing.exception.LocationNotFoundException;
+import com.ambulance.dispatch_system.routing.exception.RouteNotFoundException;
 import com.ambulance.dispatch_system.routing.service.RouteService;
 import com.ambulance.dispatch_system.routing.service.RoutingSnapshot;
 import org.springframework.stereotype.Component;
@@ -51,7 +53,7 @@ public class FitnessEvaluator {
         try {
             RouteResponse response = routingSnapshot.findRoute(ambulance.getCurrentLocationNode(), patientNodeName);
             travelTime = response.getTotalTravelTimeMinutes();
-        } catch (IllegalStateException | IllegalArgumentException e) {
+        } catch (LocationNotFoundException | RouteNotFoundException e) {
             // The routing module throws an exception if no route is found or node is invalid
             return UNREACHABLE;
         }

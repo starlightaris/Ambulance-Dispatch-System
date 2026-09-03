@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class GreedySchedulerTest {
+class GreedyRosterSchedulerTest {
 
     private static final LocalDate WEEK_STARTING = LocalDate.of(2024, 1, 1); // a Monday
     private static final FitnessWeights WEIGHTS = FitnessWeights.defaults();
@@ -52,7 +52,7 @@ class GreedySchedulerTest {
         ShiftSlot afternoon = slot(DayOfWeek.TUESDAY, LocalTime.of(8, 0), LocalTime.of(16, 0), Certification.ECG_CERTIFIED);
 
         SchedulingProblem problem = new SchedulingProblem(List.of(morning, afternoon), List.of(alice, bob), WEEK_STARTING);
-        SchedulingResult result = new GreedyScheduler(problem, WEIGHTS).run();
+        SchedulingResult result = new GreedyRosterScheduler(problem, WEIGHTS).run();
 
         assertEquals(0, result.fitnessResult().understaffedViolations());
         for (Staff assigned : result.bestChromosome().getGenes()) {
@@ -66,7 +66,7 @@ class GreedySchedulerTest {
         ShiftSlot morning = slot(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(16, 0), Certification.ECG_CERTIFIED);
 
         SchedulingProblem problem = new SchedulingProblem(List.of(morning), List.of(bob), WEEK_STARTING);
-        SchedulingResult result = new GreedyScheduler(problem, WEIGHTS).run();
+        SchedulingResult result = new GreedyRosterScheduler(problem, WEIGHTS).run();
 
         assertNull(result.bestChromosome().getGene(0));
         assertEquals(1, result.fitnessResult().understaffedViolations());
@@ -82,7 +82,7 @@ class GreedySchedulerTest {
 
         // Both staff start at 0h; the greedy rule should alternate them to keep hours balanced.
         SchedulingProblem problem = new SchedulingProblem(List.of(shiftA, shiftB, shiftC), List.of(alice, bob), WEEK_STARTING);
-        SchedulingResult result = new GreedyScheduler(problem, WEIGHTS).run();
+        SchedulingResult result = new GreedyRosterScheduler(problem, WEIGHTS).run();
 
         Staff[] genes = result.bestChromosome().getGenes();
         assertTrue(genes[0] != genes[1], "second shift should go to the staff member left idle by the first");
@@ -96,7 +96,7 @@ class GreedySchedulerTest {
         ShiftSlot secondShift = slot(DayOfWeek.TUESDAY, LocalTime.of(8, 0), LocalTime.of(16, 0), Certification.ECG_CERTIFIED); // pushes into overtime
 
         SchedulingProblem problem = new SchedulingProblem(List.of(firstShift, secondShift), List.of(onlyQualified), WEEK_STARTING);
-        SchedulingResult result = new GreedyScheduler(problem, WEIGHTS).run();
+        SchedulingResult result = new GreedyRosterScheduler(problem, WEIGHTS).run();
 
         assertNotNull(result.bestChromosome().getGene(1));
         assertTrue(result.fitnessResult().overtimeHours() > 0);
@@ -109,7 +109,7 @@ class GreedySchedulerTest {
         ShiftSlot shift = slot(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(16, 0), null);
 
         SchedulingProblem problem = new SchedulingProblem(List.of(shift), List.of(alice), WEEK_STARTING);
-        SchedulingResult result = new GreedyScheduler(problem, WEIGHTS).run();
+        SchedulingResult result = new GreedyRosterScheduler(problem, WEIGHTS).run();
 
         assertEquals(0, result.generationsRun());
         assertTrue(result.executionTimeMillis() >= 0);

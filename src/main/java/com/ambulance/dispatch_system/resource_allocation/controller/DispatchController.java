@@ -10,7 +10,6 @@ public class DispatchController {
 
     private final DispatchService dispatchService;
 
-    // This connects your controller to your service
     public DispatchController(DispatchService dispatchService) {
         this.dispatchService = dispatchService;
     }
@@ -18,19 +17,12 @@ public class DispatchController {
     /**
      * Endpoint to trigger the resource allocation for a specific emergency call.
      * URL Example: POST http://localhost:8080/api/dispatch/allocate/1
+     *
+     * Errors (e.g. an unknown callId) are handled centrally by GlobalExceptionHandler.
      */
     @PostMapping("/allocate/{callId}")
     public ResponseEntity<String> allocateAmbulance(@PathVariable Long callId) {
-        try {
-            // Run the algorithm and get the success or failure message
-            String resultMessage = dispatchService.handleEmergencyDispatch(callId);
-            
-            // Send a "200 OK" response back to the user with the message
-            return ResponseEntity.ok(resultMessage);
-            
-        } catch (RuntimeException e) {
-            // If the callId is not found, send a "400 Bad Request" error
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+        String resultMessage = dispatchService.handleEmergencyDispatch(callId);
+        return ResponseEntity.ok(resultMessage);
     }
 }

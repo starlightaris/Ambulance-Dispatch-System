@@ -1,13 +1,13 @@
 package com.ambulance.dispatch_system.triage.controller;
 
 import com.ambulance.dispatch_system.common.entity.Patient;
+import com.ambulance.dispatch_system.common.entity.TriageAssessment;
+import com.ambulance.dispatch_system.common.entity.enums.ConsciousnessLevel;
+import com.ambulance.dispatch_system.common.entity.enums.TriageCategory;
 import com.ambulance.dispatch_system.common.entity.enums.UrgencyLevel;
 import com.ambulance.dispatch_system.common.repository.PatientRepository;
-import com.ambulance.dispatch_system.triage.entity.TriageAssessment;
-import com.ambulance.dispatch_system.triage.model.dto.TriageRequestDTO;
-import com.ambulance.dispatch_system.triage.model.enums.ConsciousnessLevel;
-import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
-import com.ambulance.dispatch_system.triage.repository.TriageAssessmentRepository;
+import com.ambulance.dispatch_system.common.repository.TriageAssessmentRepository;
+import com.ambulance.dispatch_system.triage.dto.TriageRequestDTO;
 import com.ambulance.dispatch_system.triage.service.TriageService;
 
 import org.junit.jupiter.api.BeforeEach;

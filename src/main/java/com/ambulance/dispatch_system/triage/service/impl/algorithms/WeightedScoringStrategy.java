@@ -1,6 +1,6 @@
 package com.ambulance.dispatch_system.triage.service.impl.algorithms;
 
-import com.ambulance.dispatch_system.triage.model.dto.TriageRequestDTO;
+import com.ambulance.dispatch_system.triage.dto.TriageRequestDTO;
 import org.springframework.stereotype.Component;
 
 /**
