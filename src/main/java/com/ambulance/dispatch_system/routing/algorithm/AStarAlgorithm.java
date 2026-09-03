@@ -36,7 +36,6 @@ public class AStarAlgorithm {
         PriorityQueue<NodeEntry> openSet =
                 new PriorityQueue<>(Comparator.comparingDouble(NodeEntry::fScore));
 
-        // Starting point = 0 minutes travelled
         gScore.put(start.getId(), 0.0);
 
         openSet.add(new NodeEntry(start, 0.0, heuristic(start, destination)));
@@ -61,7 +60,6 @@ public class AStarAlgorithm {
 
                 RoadNode neighbour = edge.getToNode();
 
-                // Actual travel time accumulated so far
                 double tentativeGScore =
                         currentEntry.gScore()
                                 + edge.getTravelTimeMinutes();
@@ -105,7 +103,6 @@ public class AStarAlgorithm {
 
         for (RoadEdge edge : edges) {
 
-            // Ignore blocked roads
             if (edge.isBlocked()) {
                 continue;
             }
@@ -161,7 +158,6 @@ public class AStarAlgorithm {
         // Assume ambulance average speed = 40 km/h
         double averageSpeedKmPerHour = 40.0;
 
-        // Return estimated travel time in minutes
         return (distanceKm / averageSpeedKmPerHour) * 60.0;
     }
 

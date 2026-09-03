@@ -28,7 +28,6 @@ public class FitnessEvaluator {
     }
 
     public double calculateFitness(Ambulance ambulance, String patientNodeName, Set<MedicalEquipment> requiredEquipment) {
-        // Single one-off scoring call: route straight through RouteService, same as before.
         return calculateFitness(ambulance, patientNodeName, requiredEquipment, routeService::findRoute);
     }
 
@@ -50,7 +49,6 @@ public class FitnessEvaluator {
 
         double travelTime;
         try {
-            // 1. Real Distance Check using the routing module
             RouteResponse response = routingSnapshot.findRoute(ambulance.getCurrentLocationNode(), patientNodeName);
             travelTime = response.getTotalTravelTimeMinutes();
         } catch (IllegalStateException | IllegalArgumentException e) {
@@ -60,7 +58,8 @@ public class FitnessEvaluator {
 
         double score = travelTime;
 
-        // 2. Resource Waste Check
+        // Penalize carrying equipment the call doesn't need - it's capacity wasted on this job
+        // that a more specialized ambulance elsewhere might have needed.
         int extraEquipment = ambulance.getEquipment().size() - requiredEquipment.size();
         if (extraEquipment > 0) {
             score += (extraEquipment * 5.0);
