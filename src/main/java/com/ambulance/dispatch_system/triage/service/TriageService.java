@@ -1,13 +1,15 @@
 package com.ambulance.dispatch_system.triage.service;
 
 import com.ambulance.dispatch_system.common.entity.Patient;
+import com.ambulance.dispatch_system.common.entity.TriageAssessment;
+import com.ambulance.dispatch_system.common.entity.enums.TriageCategory;
 import com.ambulance.dispatch_system.common.entity.enums.UrgencyLevel;
 import com.ambulance.dispatch_system.common.repository.PatientRepository;
-import com.ambulance.dispatch_system.triage.entity.TriageAssessment;
-import com.ambulance.dispatch_system.triage.model.dto.TriageRequestDTO;
-import com.ambulance.dispatch_system.triage.model.dto.TriageResponseDTO;
-import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
-import com.ambulance.dispatch_system.triage.repository.TriageAssessmentRepository;
+import com.ambulance.dispatch_system.common.repository.TriageAssessmentRepository;
+import com.ambulance.dispatch_system.triage.exception.PatientNotFoundException;
+import com.ambulance.dispatch_system.triage.exception.TriageAssessmentNotFoundException;
+import com.ambulance.dispatch_system.triage.dto.TriageRequestDTO;
+import com.ambulance.dispatch_system.triage.dto.TriageResponseDTO;
 import com.ambulance.dispatch_system.triage.service.impl.algorithms.MTSDecisionTree;
 import com.ambulance.dispatch_system.triage.service.impl.algorithms.WeightedScoringStrategy;
 import com.ambulance.dispatch_system.triage.util.PriorityDispatchQueue;
@@ -19,7 +21,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
@@ -56,8 +57,7 @@ public class TriageService {
     @Transactional
     public TriageResponseDTO evaluate(TriageRequestDTO request) {
         Patient patient = patientRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Patient not found with ID: " + request.getPatientId()));
+                .orElseThrow(() -> new PatientNotFoundException(request.getPatientId()));
 
         TriageCategory category = mtsDecisionTree.evaluate(request);
         double score = scoringStrategy.calculateScore(request);
@@ -120,7 +120,8 @@ public class TriageService {
 
     @Transactional
     public void markResolved(UUID id) {
-        TriageAssessment assessment = assessmentRepository.findById(id).orElseThrow();
+        TriageAssessment assessment = assessmentRepository.findById(id)
+                .orElseThrow(() -> new TriageAssessmentNotFoundException(id));
         assessment.setResolved(true);
         assessmentRepository.save(assessment);
 

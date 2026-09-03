@@ -1,13 +1,13 @@
 package com.ambulance.dispatch_system.triage.controller;
 
 import com.ambulance.dispatch_system.common.entity.Patient;
+import com.ambulance.dispatch_system.common.entity.TriageAssessment;
+import com.ambulance.dispatch_system.common.entity.enums.ConsciousnessLevel;
+import com.ambulance.dispatch_system.common.entity.enums.TriageCategory;
 import com.ambulance.dispatch_system.common.entity.enums.UrgencyLevel;
 import com.ambulance.dispatch_system.common.repository.PatientRepository;
-import com.ambulance.dispatch_system.triage.entity.TriageAssessment;
-import com.ambulance.dispatch_system.triage.model.dto.TriageRequestDTO;
-import com.ambulance.dispatch_system.triage.model.enums.ConsciousnessLevel;
-import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
-import com.ambulance.dispatch_system.triage.repository.TriageAssessmentRepository;
+import com.ambulance.dispatch_system.common.repository.TriageAssessmentRepository;
+import com.ambulance.dispatch_system.triage.dto.TriageRequestDTO;
 import com.ambulance.dispatch_system.triage.service.TriageService;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -82,7 +82,7 @@ class TriageControllerIntegrationTest {
         req1.setAge(30);
         req1.setHazardPresent(false);
 
-        mockMvc.perform(post("/api/v1/triage/evaluate")
+        mockMvc.perform(post("/api/v1/triage/assessments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req1)))
                 .andExpect(status().isCreated())
@@ -104,7 +104,7 @@ class TriageControllerIntegrationTest {
         req2.setAge(25);
         req2.setHazardPresent(false);
 
-        mockMvc.perform(post("/api/v1/triage/evaluate")
+        mockMvc.perform(post("/api/v1/triage/assessments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req2)))
                 .andExpect(status().isCreated())
@@ -126,7 +126,7 @@ class TriageControllerIntegrationTest {
         req3.setHazardPresent(false);
 
         // Should rank 2nd (behind RED, ahead of BLUE)
-        mockMvc.perform(post("/api/v1/triage/evaluate")
+        mockMvc.perform(post("/api/v1/triage/assessments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req3)))
                 .andExpect(status().isCreated())
@@ -134,7 +134,7 @@ class TriageControllerIntegrationTest {
                 .andExpect(jsonPath("$.queuePosition").value(2));
                 
         // Test /queue endpoint correctly returns heap snapshot
-        mockMvc.perform(get("/api/v1/triage/queue"))
+        mockMvc.perform(get("/api/v1/triage/assessments/queue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[0].id").isNotEmpty())
@@ -155,7 +155,7 @@ class TriageControllerIntegrationTest {
     void testInvalidPayloadReturns400() throws Exception {
         String invalidReq = "{\"breathing\":true,\"painScore\":15}"; // Out of range
 
-        mockMvc.perform(post("/api/v1/triage/evaluate")
+        mockMvc.perform(post("/api/v1/triage/assessments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidReq))
                 .andExpect(status().isBadRequest());
@@ -169,7 +169,7 @@ class TriageControllerIntegrationTest {
                 + ",\"oxygenSaturation\":95,\"systolicBP\":120,\"painScore\":0"
                 + ",\"temperature\":37.0,\"age\":30,\"hazardPresent\":false}";
 
-        mockMvc.perform(post("/api/v1/triage/evaluate")
+        mockMvc.perform(post("/api/v1/triage/assessments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(req1))
                 .andExpect(status().isCreated());
@@ -179,12 +179,12 @@ class TriageControllerIntegrationTest {
         UUID id = assessment.getId();
         
         // Assert in queue
-        mockMvc.perform(get("/api/v1/triage/queue"))
+        mockMvc.perform(get("/api/v1/triage/assessments/queue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
                 
         // Resolve
-        mockMvc.perform(put("/api/v1/triage/" + id + "/resolve"))
+        mockMvc.perform(put("/api/v1/triage/assessments/" + id + "/resolve"))
                 .andExpect(status().isNoContent());
                 
         // Assert resolved in DB
@@ -192,7 +192,7 @@ class TriageControllerIntegrationTest {
         assertTrue(resolvedAssessment.getResolved());
         
         // Assert not in queue
-        mockMvc.perform(get("/api/v1/triage/queue"))
+        mockMvc.perform(get("/api/v1/triage/assessments/queue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
@@ -240,7 +240,7 @@ class TriageControllerIntegrationTest {
         triageService.initQueue();
         
         // Assert the heap is correctly ordered
-        mockMvc.perform(get("/api/v1/triage/queue"))
+        mockMvc.perform(get("/api/v1/triage/assessments/queue"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].category").value("RED"))

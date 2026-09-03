@@ -9,7 +9,7 @@ import java.util.Arrays;
  * problem's expandedSlots list. This is the Genetic Algorithm's
  * chromosome, and is also the representation produced by the Greedy
  * baseline, so both algorithms can be scored with the same
- * FitnessEvaluator for a fair comparison.
+ * RosterFitnessEvaluator for a fair comparison.
  */
 public class RosterChromosome {
 

@@ -11,7 +11,7 @@ import com.ambulance.dispatch_system.routing.dto.RouteResponse;
 import com.ambulance.dispatch_system.routing.service.RouteService;
 
 @RestController
-@RequestMapping("/api/routing")
+@RequestMapping("/api/v1/routes")
 public class RouteController {
 
     private final RouteService routeService;
@@ -20,7 +20,7 @@ public class RouteController {
         this.routeService = routeService;
     }
 
-    @PostMapping("/find-route")
+    @PostMapping
     public ResponseEntity<RouteResponse> findRoute(
             @RequestBody RouteRequest request) {
 

@@ -25,4 +25,12 @@ public interface RouteService {
     RouteResponse findRoute(
             String startNodeName,
             String destinationNodeName);
+
+    /**
+     * Loads the current unblocked road network once, for a caller that needs
+     * to run several route queries against the same graph (e.g. scoring
+     * every candidate ambulance for one dispatch decision) without
+     * re-fetching the full edge list from the database on every single query.
+     */
+    RoutingSnapshot loadSnapshot();
 }

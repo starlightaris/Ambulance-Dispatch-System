@@ -1,4 +1,4 @@
-package com.ambulance.dispatch_system.triage.model.enums;
+package com.ambulance.dispatch_system.common.entity.enums;
 
 /**
  * AVPU Scale for Consciousness Level

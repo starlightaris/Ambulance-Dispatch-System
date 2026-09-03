@@ -10,6 +10,7 @@ import com.ambulance.dispatch_system.common.repository.RoadEdgeRepository;
 import com.ambulance.dispatch_system.common.repository.RoadNodeRepository;
 import com.ambulance.dispatch_system.routing.service.RouteService;
 import com.ambulance.dispatch_system.routing.service.RouteServiceImpl;
+import com.ambulance.dispatch_system.routing.service.RoutingSnapshot;
 import com.ambulance.dispatch_system.routing.dto.RouteResponse;
 import com.ambulance.dispatch_system.routing.dto.RouteRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -131,6 +132,12 @@ class GreedySchedulerRoutingTest {
             public RouteResponse findRoute(RouteRequest request) {
                 return findRoute(request.getStartLocationId(), request.getDestinationLocationId());
             }
+            @Override
+            public RoutingSnapshot loadSnapshot() {
+                // No caching to test - just delegate through the instrumented findRoute above,
+                // so the "once per ambulance" count below still reflects every scoring call.
+                return this::findRoute;
+            }
         };
         List<Ambulance> fleet = List.of(
                 ambulance("A1", "NodeA", NEEDS_ECG), ambulance("A2", "NodeA", NEEDS_ECG),
@@ -141,6 +148,35 @@ class GreedySchedulerRoutingTest {
 
         assertEquals(fleet.size(), runs[0],
                 "scoring must not re-run the graph search on both sides of every comparison");
+    }
+
+    @Test
+    void fetchesTheRoadNetworkOnceRegardlessOfFleetSize() {
+        RoadNodeRepository roadNodeRepository = Mockito.mock(RoadNodeRepository.class);
+        RoadEdgeRepository roadEdgeRepository = Mockito.mock(RoadEdgeRepository.class);
+
+        when(roadNodeRepository.findByName(Mockito.any())).thenAnswer(inv -> {
+            String name = inv.getArgument(0);
+            return allNodes.stream().filter(n -> n.getName().equals(name)).findFirst();
+        });
+        when(roadNodeRepository.findAll()).thenReturn(allNodes);
+        when(roadEdgeRepository.findByBlockedFalse()).thenAnswer(inv ->
+                allEdges.stream().filter(e -> !e.isBlocked()).toList());
+
+        AmbulanceRepository ambulanceRepository = Mockito.mock(AmbulanceRepository.class);
+        List<Ambulance> fleet = List.of(
+                ambulance("A1", "NodeA", NEEDS_ECG), ambulance("A2", "NodeA", NEEDS_ECG),
+                ambulance("A3", "NodeA", NEEDS_ECG), ambulance("A4", "NodeB", NEEDS_ECG),
+                ambulance("A5", "NodeB", NEEDS_ECG));
+        when(ambulanceRepository.findByStatus(AmbulanceStatus.AVAILABLE)).thenReturn(fleet);
+
+        RouteService routeService = new RouteServiceImpl(roadNodeRepository, roadEdgeRepository);
+        GreedyScheduler scheduler = new GreedyScheduler(ambulanceRepository, new FitnessEvaluator(routeService));
+
+        scheduler.findBestAmbulance("NodeC", NEEDS_ECG);
+
+        Mockito.verify(roadEdgeRepository, Mockito.times(1)).findByBlockedFalse();
+        Mockito.verify(roadNodeRepository, Mockito.times(1)).findAll();
     }
 
     private GreedyScheduler scheduler(List<Ambulance> available) {
@@ -155,10 +191,11 @@ class GreedySchedulerRoutingTest {
             String name = inv.getArgument(0);
             return allNodes.stream().filter(n -> n.getName().equals(name)).findFirst();
         });
-        when(roadEdgeRepository.findByBlockedFalse()).thenAnswer(inv -> 
+        when(roadNodeRepository.findAll()).thenReturn(allNodes);
+        when(roadEdgeRepository.findByBlockedFalse()).thenAnswer(inv ->
             allEdges.stream().filter(e -> !e.isBlocked()).toList()
         );
-        
+
         return scheduler(available, new RouteServiceImpl(roadNodeRepository, roadEdgeRepository));
     }
 

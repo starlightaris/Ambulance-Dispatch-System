@@ -1,8 +1,7 @@
-package com.ambulance.dispatch_system.triage.entity;
+package com.ambulance.dispatch_system.common.entity;
 
-import com.ambulance.dispatch_system.common.entity.Patient;
-import com.ambulance.dispatch_system.triage.model.enums.ConsciousnessLevel;
-import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
+import com.ambulance.dispatch_system.common.entity.enums.ConsciousnessLevel;
+import com.ambulance.dispatch_system.common.entity.enums.TriageCategory;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,7 +16,6 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "triage_assessments",
-        schema = "task4",
         indexes = @Index(
                 name = "idx_triage_active_queue",
                 columnList = "resolved, severity_rank, tie_breaker_score, created_at"
@@ -69,7 +67,6 @@ public class TriageAssessment {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "triage_assessment_symptoms",
-            schema = "task4",
             joinColumns = @JoinColumn(name = "assessment_id", nullable = false)
     )
     @OrderColumn(name = "symptom_order")

@@ -1,7 +1,7 @@
 package com.ambulance.dispatch_system.triage.util;
 
-import com.ambulance.dispatch_system.triage.entity.TriageAssessment;
-import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
+import com.ambulance.dispatch_system.common.entity.TriageAssessment;
+import com.ambulance.dispatch_system.common.entity.enums.TriageCategory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
