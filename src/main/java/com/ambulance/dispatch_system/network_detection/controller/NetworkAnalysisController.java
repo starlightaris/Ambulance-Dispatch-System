@@ -7,9 +7,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(originPatterns = "${app.cors.allowed-origin-patterns:http://localhost:*}")
 @RestController
-@RequestMapping("/api/network")
+@RequestMapping("/api/v1/network")
 public class NetworkAnalysisController {
 
     private final NetworkAnalysisService networkAnalysisService;

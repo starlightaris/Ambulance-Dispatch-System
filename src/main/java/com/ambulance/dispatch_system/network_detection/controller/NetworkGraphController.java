@@ -5,7 +5,6 @@ import com.ambulance.dispatch_system.network_detection.dto.RoadEdgeDto;
 import com.ambulance.dispatch_system.network_detection.dto.RoadNodeDto;
 import com.ambulance.dispatch_system.network_detection.service.NetworkGraphService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,8 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/network/graph")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/v1/network/graph")
 public class NetworkGraphController {
 
     private final NetworkGraphService networkGraphService;

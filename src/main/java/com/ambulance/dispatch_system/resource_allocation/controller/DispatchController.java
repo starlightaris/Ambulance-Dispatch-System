@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/dispatch")
+@RequestMapping("/api/v1/calls")
 public class DispatchController {
 
     private final DispatchService dispatchService;
@@ -16,13 +16,13 @@ public class DispatchController {
 
     /**
      * Endpoint to trigger the resource allocation for a specific emergency call.
-     * URL Example: POST http://localhost:8080/api/dispatch/allocate/1
+     * URL Example: POST http://localhost:8080/api/v1/calls/1/dispatch
      *
-     * Errors (e.g. an unknown callId) are handled centrally by GlobalExceptionHandler.
+     * Errors (e.g. an unknown call id) are handled centrally by GlobalExceptionHandler.
      */
-    @PostMapping("/allocate/{callId}")
-    public ResponseEntity<String> allocateAmbulance(@PathVariable Long callId) {
-        String resultMessage = dispatchService.handleEmergencyDispatch(callId);
+    @PostMapping("/{id}/dispatch")
+    public ResponseEntity<String> allocateAmbulance(@PathVariable Long id) {
+        String resultMessage = dispatchService.handleEmergencyDispatch(id);
         return ResponseEntity.ok(resultMessage);
     }
 }

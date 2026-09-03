@@ -3,6 +3,7 @@ package com.ambulance.dispatch_system.optimization.controller;
 import com.ambulance.dispatch_system.optimization.dto.ShiftSlotDto;
 import com.ambulance.dispatch_system.optimization.service.ShiftSlotService;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,12 +12,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 /** CRUD endpoints for ShiftSlot - the recurring weekly coverage template the scheduling algorithms fill. */
 @RestController
-@RequestMapping("/api/optimization/shift-slots")
+@RequestMapping("/api/v1/optimization/shift-slots")
 public class ShiftSlotController {
 
     private final ShiftSlotService shiftSlotService;
@@ -36,8 +39,11 @@ public class ShiftSlotController {
     }
 
     @PostMapping
-    public ShiftSlotDto create(@Valid @RequestBody ShiftSlotDto request) {
-        return shiftSlotService.create(request);
+    public ResponseEntity<ShiftSlotDto> create(@Valid @RequestBody ShiftSlotDto request) {
+        ShiftSlotDto created = shiftSlotService.create(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(created.id()).toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @PutMapping("/{id}")
@@ -46,7 +52,8 @@ public class ShiftSlotController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         shiftSlotService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
