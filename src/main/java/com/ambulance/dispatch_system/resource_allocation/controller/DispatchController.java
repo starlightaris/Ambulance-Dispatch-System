@@ -25,4 +25,16 @@ public class DispatchController {
         String resultMessage = dispatchService.handleEmergencyDispatch(id);
         return ResponseEntity.ok(resultMessage);
     }
+
+    // Fetch pending emergencies
+    @GetMapping("/pending")
+    public ResponseEntity<?> getPendingEmergencies() {
+        return ResponseEntity.ok(dispatchService.getPendingCalls());
+    }
+
+    // Fetch ambulances
+    @GetMapping("/ambulances")
+    public ResponseEntity<?> getAmbulances() {
+        return ResponseEntity.ok(dispatchService.getAllAmbulances());
+    }
 }

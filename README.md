@@ -43,7 +43,8 @@ and benchmark results.
    ```bash
    ./mvnw spring-boot:run
    ```
-   The API is served at `http://localhost:8080`.
+   The API is served at `http://localhost:8080`. Interactive API docs (Swagger UI) are at
+   `http://localhost:8080/swagger-ui.html`, with the raw OpenAPI spec at `/v3/api-docs`.
 
 ### Running Tests
 ```bash
@@ -52,7 +53,10 @@ and benchmark results.
 
 ## API Overview
 
-All endpoints are versioned under `/api/v1`.
+All endpoints are versioned under `/api/v1`. This table is a snapshot for orientation — it can
+drift as controllers change. The generated OpenAPI spec (`/v3/api-docs`, browsable at
+`/swagger-ui.html`) is the source of truth; check it directly against a running instance before
+building against any endpoint listed here.
 
 | Module | Endpoint | Description |
 |--------|----------|--------------|
