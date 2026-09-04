@@ -1,4 +1,4 @@
-package com.ambulance.dispatch_system.triage.model.enums;
+package com.ambulance.dispatch_system.common.entity.enums;
 
 /**
  * Manchester Triage System (MTS) Categories

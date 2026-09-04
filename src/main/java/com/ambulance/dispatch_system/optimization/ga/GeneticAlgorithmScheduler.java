@@ -1,7 +1,7 @@
 package com.ambulance.dispatch_system.optimization.ga;
 
 import com.ambulance.dispatch_system.common.entity.Staff;
-import com.ambulance.dispatch_system.optimization.fitness.FitnessEvaluator;
+import com.ambulance.dispatch_system.optimization.fitness.RosterFitnessEvaluator;
 import com.ambulance.dispatch_system.optimization.fitness.FitnessResult;
 import com.ambulance.dispatch_system.optimization.fitness.FitnessWeights;
 import com.ambulance.dispatch_system.optimization.model.RosterChromosome;
@@ -25,7 +25,7 @@ import java.util.Random;
  * per-gene random-reassignment mutation, and elitism.
  *
  * <p><b>Complexity:</b> evaluating one generation costs
- * O(P * n log n) (P chromosomes, each an O(n log n) FitnessEvaluator
+ * O(P * n log n) (P chromosomes, each an O(n log n) RosterFitnessEvaluator
  * pass over n seats); producing the next generation costs O(P) for
  * selection/crossover plus O(n) per child for mutation, i.e. O(P * n).
  * Over G generations the total is O(G * P * n log n).
@@ -34,7 +34,7 @@ public class GeneticAlgorithmScheduler {
 
     private final SchedulingProblem problem;
     private final GAParameters params;
-    private final FitnessEvaluator evaluator;
+    private final RosterFitnessEvaluator evaluator;
     private final Random random;
 
     /**
@@ -44,7 +44,7 @@ public class GeneticAlgorithmScheduler {
     public GeneticAlgorithmScheduler(SchedulingProblem problem, GAParameters params, FitnessWeights weights, Random random) {
         this.problem = problem;
         this.params = params;
-        this.evaluator = new FitnessEvaluator(weights);
+        this.evaluator = new RosterFitnessEvaluator(weights);
         this.random = random;
     }
 

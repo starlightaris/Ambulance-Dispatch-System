@@ -2,7 +2,7 @@ package com.ambulance.dispatch_system.optimization.greedy;
 
 import com.ambulance.dispatch_system.common.entity.ShiftSlot;
 import com.ambulance.dispatch_system.common.entity.Staff;
-import com.ambulance.dispatch_system.optimization.fitness.FitnessEvaluator;
+import com.ambulance.dispatch_system.optimization.fitness.RosterFitnessEvaluator;
 import com.ambulance.dispatch_system.optimization.fitness.FitnessResult;
 import com.ambulance.dispatch_system.optimization.fitness.FitnessWeights;
 import com.ambulance.dispatch_system.optimization.model.RosterChromosome;
@@ -32,14 +32,14 @@ import java.util.Map;
  * <p><b>Complexity:</b> O(n * m) - a linear scan of the m staff members
  * for each of the n seats.
  */
-public class GreedyScheduler {
+public class GreedyRosterScheduler {
 
     private final SchedulingProblem problem;
-    private final FitnessEvaluator evaluator;
+    private final RosterFitnessEvaluator evaluator;
 
-    public GreedyScheduler(SchedulingProblem problem, FitnessWeights weights) {
+    public GreedyRosterScheduler(SchedulingProblem problem, FitnessWeights weights) {
         this.problem = problem;
-        this.evaluator = new FitnessEvaluator(weights);
+        this.evaluator = new RosterFitnessEvaluator(weights);
     }
 
     public SchedulingResult run() {
