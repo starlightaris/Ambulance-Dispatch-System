@@ -2,6 +2,7 @@ package com.ambulance.dispatch_system.resource_allocation.controller;
 
 import com.ambulance.dispatch_system.common.entity.Ambulance;
 import com.ambulance.dispatch_system.common.entity.Call;
+import com.ambulance.dispatch_system.resource_allocation.exception.CallNotFoundException;
 import com.ambulance.dispatch_system.resource_allocation.service.DispatchService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,15 +40,13 @@ class DispatchControllerTest {
     }
 
     @Test
-    void allocateAmbulance_Exception_ReturnsBadRequest() {
+    void allocateAmbulance_CallNotFound_PropagatesToGlobalExceptionHandler() {
         Long callId = 1L;
-        String errorMessage = "Call not found with ID: 1";
-        when(dispatchService.handleEmergencyDispatch(callId)).thenThrow(new RuntimeException(errorMessage));
+        when(dispatchService.handleEmergencyDispatch(callId)).thenThrow(new CallNotFoundException(callId));
 
-        ResponseEntity<String> response = dispatchController.allocateAmbulance(callId);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Error: " + errorMessage, response.getBody());
+        // The controller no longer catches this itself - GlobalExceptionHandler maps
+        // CallNotFoundException (a BaseException) to the 404 response.
+        assertThrows(CallNotFoundException.class, () -> dispatchController.allocateAmbulance(callId));
     }
 
     @Test
