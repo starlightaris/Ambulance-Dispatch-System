@@ -1,0 +1,116 @@
+package com.ambulance.dispatch_system.resource_allocation.service;
+
+import com.ambulance.dispatch_system.common.entity.Ambulance;
+import com.ambulance.dispatch_system.common.entity.Call;
+import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
+import com.ambulance.dispatch_system.common.entity.enums.CallStatus;
+import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
+import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
+import com.ambulance.dispatch_system.common.repository.CallRepository;
+import com.ambulance.dispatch_system.resource_allocation.optimization.GreedyScheduler;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class DispatchServiceTest {
+
+    @Mock
+    private CallRepository callRepository;
+
+    @Mock
+    private AmbulanceRepository ambulanceRepository;
+
+    @Mock
+    private GreedyScheduler greedyScheduler;
+
+    @InjectMocks
+    private DispatchService dispatchService;
+
+    @Test
+    void handleEmergencyDispatch_CallNotFound_ThrowsException() {
+        when(callRepository.findById(1L)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            dispatchService.handleEmergencyDispatch(1L);
+        });
+
+        assertEquals("Call not found with ID: 1", exception.getMessage());
+    }
+
+    @Test
+    void handleEmergencyDispatch_NoAmbulanceAvailable_ReturnsMessage() {
+        Call call = new Call();
+        call.setId(1L);
+        call.setLocationNode("Node1");
+        call.setRequiredEquipment(Set.of(MedicalEquipment.DEFIBRILLATOR));
+
+        when(callRepository.findById(1L)).thenReturn(Optional.of(call));
+        when(greedyScheduler.findBestAmbulance(any(), any())).thenReturn(Optional.empty());
+
+        String result = dispatchService.handleEmergencyDispatch(1L);
+
+        assertEquals("No suitable ambulance available at this time.", result);
+    }
+
+    @Test
+    void handleEmergencyDispatch_Success_DispatchesAmbulance() {
+        Call call = new Call();
+        call.setId(1L);
+        call.setLocationNode("Node1");
+        call.setRequiredEquipment(Set.of(MedicalEquipment.DEFIBRILLATOR));
+
+        Ambulance ambulance = new Ambulance();
+        ambulance.setId(1L);
+        ambulance.setVehicleNumber("AMB-001");
+        ambulance.setStatus(AmbulanceStatus.AVAILABLE);
+
+        when(callRepository.findById(1L)).thenReturn(Optional.of(call));
+        when(greedyScheduler.findBestAmbulance(any(), any())).thenReturn(Optional.of(ambulance));
+
+        String result = dispatchService.handleEmergencyDispatch(1L);
+
+        assertEquals("Ambulance AMB-001 dispatched successfully.", result);
+        assertEquals(CallStatus.DISPATCHED, call.getStatus());
+        assertEquals(AmbulanceStatus.DISPATCHED, ambulance.getStatus());
+        assertEquals(ambulance, call.getAssignedAmbulance());
+
+        verify(ambulanceRepository, times(1)).save(ambulance);
+        verify(callRepository, times(1)).save(call);
+    }
+
+    @Test
+    void getPendingCalls_ReturnsCalls() {
+        Call call1 = new Call();
+        call1.setStatus(CallStatus.RECEIVED);
+        
+        when(callRepository.findByStatus(CallStatus.RECEIVED)).thenReturn(List.of(call1));
+
+        List<Call> pendingCalls = dispatchService.getPendingCalls();
+
+        assertNotNull(pendingCalls);
+        assertEquals(1, pendingCalls.size());
+        assertEquals(CallStatus.RECEIVED, pendingCalls.get(0).getStatus());
+    }
+
+    @Test
+    void getAllAmbulances_ReturnsAmbulances() {
+        Ambulance ambulance1 = new Ambulance();
+        when(ambulanceRepository.findAll()).thenReturn(List.of(ambulance1));
+
+        List<Ambulance> ambulances = dispatchService.getAllAmbulances();
+
+        assertNotNull(ambulances);
+        assertEquals(1, ambulances.size());
+    }
+}
