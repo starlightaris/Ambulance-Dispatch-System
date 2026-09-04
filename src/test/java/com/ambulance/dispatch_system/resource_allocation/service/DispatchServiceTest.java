@@ -7,6 +7,9 @@ import com.ambulance.dispatch_system.common.entity.enums.CallStatus;
 import com.ambulance.dispatch_system.common.entity.enums.MedicalEquipment;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.CallRepository;
+import com.ambulance.dispatch_system.resource_allocation.dto.AmbulanceDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CallDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.DispatchResultDto;
 import com.ambulance.dispatch_system.resource_allocation.optimization.GreedyScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,9 +61,12 @@ class DispatchServiceTest {
         when(callRepository.findById(1L)).thenReturn(Optional.of(call));
         when(greedyScheduler.findBestAmbulance(any(), any())).thenReturn(Optional.empty());
 
-        String result = dispatchService.handleEmergencyDispatch(1L);
+        DispatchResultDto result = dispatchService.handleEmergencyDispatch(1L);
 
-        assertEquals("No suitable ambulance available at this time.", result);
+        assertFalse(result.dispatched());
+        assertEquals(1L, result.callId());
+        assertNull(result.ambulanceVehicleNumber());
+        assertEquals("No suitable ambulance available at this time.", result.message());
     }
 
     @Test
@@ -78,9 +84,12 @@ class DispatchServiceTest {
         when(callRepository.findById(1L)).thenReturn(Optional.of(call));
         when(greedyScheduler.findBestAmbulance(any(), any())).thenReturn(Optional.of(ambulance));
 
-        String result = dispatchService.handleEmergencyDispatch(1L);
+        DispatchResultDto result = dispatchService.handleEmergencyDispatch(1L);
 
-        assertEquals("Ambulance AMB-001 dispatched successfully.", result);
+        assertTrue(result.dispatched());
+        assertEquals(1L, result.callId());
+        assertEquals("AMB-001", result.ambulanceVehicleNumber());
+        assertEquals("Ambulance AMB-001 dispatched successfully.", result.message());
         assertEquals(CallStatus.DISPATCHED, call.getStatus());
         assertEquals(AmbulanceStatus.DISPATCHED, ambulance.getStatus());
         assertEquals(ambulance, call.getAssignedAmbulance());
@@ -93,14 +102,14 @@ class DispatchServiceTest {
     void getPendingCalls_ReturnsCalls() {
         Call call1 = new Call();
         call1.setStatus(CallStatus.RECEIVED);
-        
+
         when(callRepository.findByStatus(CallStatus.RECEIVED)).thenReturn(List.of(call1));
 
-        List<Call> pendingCalls = dispatchService.getPendingCalls();
+        List<CallDto> pendingCalls = dispatchService.getPendingCalls();
 
         assertNotNull(pendingCalls);
         assertEquals(1, pendingCalls.size());
-        assertEquals(CallStatus.RECEIVED, pendingCalls.get(0).getStatus());
+        assertEquals(CallStatus.RECEIVED, pendingCalls.get(0).status());
     }
 
     @Test
@@ -108,7 +117,7 @@ class DispatchServiceTest {
         Ambulance ambulance1 = new Ambulance();
         when(ambulanceRepository.findAll()).thenReturn(List.of(ambulance1));
 
-        List<Ambulance> ambulances = dispatchService.getAllAmbulances();
+        List<AmbulanceDto> ambulances = dispatchService.getAllAmbulances();
 
         assertNotNull(ambulances);
         assertEquals(1, ambulances.size());

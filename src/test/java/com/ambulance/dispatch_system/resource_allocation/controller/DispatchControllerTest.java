@@ -1,7 +1,8 @@
 package com.ambulance.dispatch_system.resource_allocation.controller;
 
-import com.ambulance.dispatch_system.common.entity.Ambulance;
-import com.ambulance.dispatch_system.common.entity.Call;
+import com.ambulance.dispatch_system.resource_allocation.dto.AmbulanceDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CallDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.DispatchResultDto;
 import com.ambulance.dispatch_system.resource_allocation.exception.CallNotFoundException;
 import com.ambulance.dispatch_system.resource_allocation.service.DispatchService;
 import org.junit.jupiter.api.Test;
@@ -30,13 +31,14 @@ class DispatchControllerTest {
     @Test
     void allocateAmbulance_Success_ReturnsOk() {
         Long callId = 1L;
-        String successMessage = "Ambulance AMB-001 dispatched successfully.";
-        when(dispatchService.handleEmergencyDispatch(callId)).thenReturn(successMessage);
+        DispatchResultDto expected = new DispatchResultDto(true, callId, "AMB-001",
+                "Ambulance AMB-001 dispatched successfully.");
+        when(dispatchService.handleEmergencyDispatch(callId)).thenReturn(expected);
 
-        ResponseEntity<String> response = dispatchController.allocateAmbulance(callId);
+        ResponseEntity<DispatchResultDto> response = dispatchController.allocateAmbulance(callId);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(successMessage, response.getBody());
+        assertEquals(expected, response.getBody());
     }
 
     @Test
@@ -51,10 +53,11 @@ class DispatchControllerTest {
 
     @Test
     void getPendingEmergencies_ReturnsList() {
-        List<Call> pendingCalls = List.of(new Call());
+        List<CallDto> pendingCalls = List.of(
+                new CallDto(1L, "Jane Doe", null, "N1", null, null, null, null));
         when(dispatchService.getPendingCalls()).thenReturn(pendingCalls);
 
-        ResponseEntity<?> response = dispatchController.getPendingEmergencies();
+        ResponseEntity<List<CallDto>> response = dispatchController.getPendingEmergencies();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(pendingCalls, response.getBody());
@@ -62,10 +65,11 @@ class DispatchControllerTest {
 
     @Test
     void getAmbulances_ReturnsList() {
-        List<Ambulance> ambulances = List.of(new Ambulance());
+        List<AmbulanceDto> ambulances = List.of(
+                new AmbulanceDto(1L, "AMB-001", "N1", null, null));
         when(dispatchService.getAllAmbulances()).thenReturn(ambulances);
 
-        ResponseEntity<?> response = dispatchController.getAmbulances();
+        ResponseEntity<List<AmbulanceDto>> response = dispatchController.getAmbulances();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(ambulances, response.getBody());
