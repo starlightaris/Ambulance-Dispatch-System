@@ -2,6 +2,7 @@ package com.ambulance.dispatch_system.resource_allocation.controller;
 
 import com.ambulance.dispatch_system.resource_allocation.dto.AmbulanceDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.CallDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CandidateDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.DispatchResultDto;
 import com.ambulance.dispatch_system.resource_allocation.exception.CallNotFoundException;
 import com.ambulance.dispatch_system.resource_allocation.service.DispatchService;
@@ -49,6 +50,18 @@ class DispatchControllerTest {
         // The controller no longer catches this itself - GlobalExceptionHandler maps
         // CallNotFoundException (a BaseException) to the 404 response.
         assertThrows(CallNotFoundException.class, () -> dispatchController.allocateAmbulance(callId));
+    }
+
+    @Test
+    void getCandidates_ReturnsRankedList() {
+        Long callId = 1L;
+        List<CandidateDto> candidates = List.of(new CandidateDto(2L, "AMB-002", 7.0, 1, 12.0));
+        when(dispatchService.getCandidates(callId)).thenReturn(candidates);
+
+        ResponseEntity<List<CandidateDto>> response = dispatchController.getCandidates(callId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(candidates, response.getBody());
     }
 
     @Test

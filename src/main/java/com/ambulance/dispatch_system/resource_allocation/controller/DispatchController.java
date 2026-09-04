@@ -2,6 +2,7 @@ package com.ambulance.dispatch_system.resource_allocation.controller;
 
 import com.ambulance.dispatch_system.resource_allocation.dto.AmbulanceDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.CallDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CandidateDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.DispatchResultDto;
 import com.ambulance.dispatch_system.resource_allocation.service.DispatchService;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,21 @@ public class DispatchController {
     public ResponseEntity<DispatchResultDto> allocateAmbulance(@PathVariable Long id) {
         DispatchResultDto result = dispatchService.handleEmergencyDispatch(id);
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Ranks every ambulance eligible for a call, best-first, exactly as the greedy
+     * scheduler would decide - without dispatching anything. Read-only; safe to poll
+     * for a live preview before committing via {@link #allocateAmbulance}.
+     *
+     * Errors (e.g. an unknown call id) are handled centrally by GlobalExceptionHandler.
+     *
+     * @param id identifier of the call to rank candidates for
+     * @return candidate ambulances in dispatch order
+     */
+    @GetMapping("/{id}/candidates")
+    public ResponseEntity<List<CandidateDto>> getCandidates(@PathVariable Long id) {
+        return ResponseEntity.ok(dispatchService.getCandidates(id));
     }
 
     /**

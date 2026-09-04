@@ -9,7 +9,9 @@ import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.CallRepository;
 import com.ambulance.dispatch_system.resource_allocation.dto.AmbulanceDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.CallDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CandidateDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.DispatchResultDto;
+import com.ambulance.dispatch_system.resource_allocation.optimization.FitnessEvaluator;
 import com.ambulance.dispatch_system.resource_allocation.optimization.GreedyScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -96,6 +98,42 @@ class DispatchServiceTest {
 
         verify(ambulanceRepository, times(1)).save(ambulance);
         verify(callRepository, times(1)).save(call);
+    }
+
+    @Test
+    void getCandidates_ReturnsRankedList() {
+        Call call = new Call();
+        call.setId(1L);
+        call.setLocationNode("Node1");
+        call.setRequiredEquipment(Set.of(MedicalEquipment.DEFIBRILLATOR));
+
+        Ambulance ambulance = new Ambulance();
+        ambulance.setId(2L);
+        ambulance.setVehicleNumber("AMB-002");
+
+        GreedyScheduler.ScoredAmbulance scored = new GreedyScheduler.ScoredAmbulance(
+                ambulance, new FitnessEvaluator.FitnessBreakdown(7.0, 1, 12.0));
+
+        when(callRepository.findById(1L)).thenReturn(Optional.of(call));
+        when(greedyScheduler.rankCandidates("Node1", call.getRequiredEquipment()))
+                .thenReturn(List.of(scored));
+
+        List<CandidateDto> candidates = dispatchService.getCandidates(1L);
+
+        assertEquals(1, candidates.size());
+        CandidateDto candidate = candidates.get(0);
+        assertEquals(2L, candidate.ambulanceId());
+        assertEquals("AMB-002", candidate.vehicleNumber());
+        assertEquals(7.0, candidate.travelMinutes());
+        assertEquals(1, candidate.extraEquipmentCount());
+        assertEquals(12.0, candidate.score());
+    }
+
+    @Test
+    void getCandidates_CallNotFound_ThrowsException() {
+        when(callRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> dispatchService.getCandidates(1L));
     }
 
     @Test

@@ -42,11 +42,22 @@ public class FitnessEvaluator {
      */
     public double calculateFitness(Ambulance ambulance, String patientNodeName, Set<MedicalEquipment> requiredEquipment,
                                     RoutingSnapshot routingSnapshot) {
+        return evaluate(ambulance, patientNodeName, requiredEquipment, routingSnapshot).score();
+    }
+
+    /**
+     * Same scoring as {@link #calculateFitness}, but returns the travel-time and
+     * equipment-penalty components separately instead of just their sum - so a caller can show
+     * *why* an ambulance scored the way it did (e.g. a dispatch-board preview), not just the
+     * final number.
+     */
+    public FitnessBreakdown evaluate(Ambulance ambulance, String patientNodeName, Set<MedicalEquipment> requiredEquipment,
+                                      RoutingSnapshot routingSnapshot) {
 
         // An ambulance with no recorded position has no vertex to route from, and a call
         // with no location has no destination.
         if (ambulance.getCurrentLocationNode() == null || patientNodeName == null) {
-            return UNREACHABLE;
+            return FitnessBreakdown.unreachable();
         }
 
         double travelTime;
@@ -55,19 +66,28 @@ public class FitnessEvaluator {
             travelTime = response.getTotalTravelTimeMinutes();
         } catch (LocationNotFoundException | RouteNotFoundException e) {
             // The routing module throws an exception if no route is found or node is invalid
-            return UNREACHABLE;
+            return FitnessBreakdown.unreachable();
         }
-
-        double score = travelTime;
 
         // Penalize carrying equipment the call doesn't need - it's capacity wasted on this job
         // that a more specialized ambulance elsewhere might have needed.
-        int extraEquipment = ambulance.getEquipment().size() - requiredEquipment.size();
-        if (extraEquipment > 0) {
-            score += (extraEquipment * 5.0);
-        }
+        int extraEquipment = Math.max(ambulance.getEquipment().size() - requiredEquipment.size(), 0);
+        double score = travelTime + (extraEquipment * 5.0);
 
-        return score;
+        return new FitnessBreakdown(travelTime, extraEquipment, score);
+    }
+
+    /**
+     * The components behind one ambulance's fitness score.
+     *
+     * @param travelMinutes real shortest-path travel time from the ambulance to the call
+     * @param extraEquipmentCount equipment carried beyond what the call requires
+     * @param score travelMinutes + extraEquipmentCount * 5.0, or {@link #UNREACHABLE}
+     */
+    public record FitnessBreakdown(double travelMinutes, int extraEquipmentCount, double score) {
+        static FitnessBreakdown unreachable() {
+            return new FitnessBreakdown(UNREACHABLE, 0, UNREACHABLE);
+        }
     }
 
     /**

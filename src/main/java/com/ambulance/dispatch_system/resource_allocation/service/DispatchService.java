@@ -8,6 +8,7 @@ import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.CallRepository;
 import com.ambulance.dispatch_system.resource_allocation.dto.AmbulanceDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.CallDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CandidateDto;
 import com.ambulance.dispatch_system.resource_allocation.dto.DispatchResultDto;
 import com.ambulance.dispatch_system.resource_allocation.exception.CallNotFoundException;
 import com.ambulance.dispatch_system.resource_allocation.optimization.GreedyScheduler;
@@ -57,6 +58,20 @@ public class DispatchService {
 
         return new DispatchResultDto(true, callId, bestAmbulance.getVehicleNumber(),
                 "Ambulance " + bestAmbulance.getVehicleNumber() + " dispatched successfully.");
+    }
+
+    /**
+     * Ranks every eligible ambulance for a call exactly as {@link #handleEmergencyDispatch}
+     * would, but without assigning anything - a read-only preview of the greedy scheduler's
+     * decision for a dispatch-board UI.
+     */
+    public List<CandidateDto> getCandidates(Long callId) {
+        Call call = callRepository.findById(callId)
+                .orElseThrow(() -> new CallNotFoundException(callId));
+
+        return greedyScheduler.rankCandidates(call.getLocationNode(), call.getRequiredEquipment()).stream()
+                .map(CandidateDto::fromScored)
+                .toList();
     }
 
     public List<CallDto> getPendingCalls() {
