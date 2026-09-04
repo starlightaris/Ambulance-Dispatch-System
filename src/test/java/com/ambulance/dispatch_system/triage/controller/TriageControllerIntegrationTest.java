@@ -32,7 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// MOCK (the default) is used instead of RANDOM_PORT: the test only ever drives the app
+// through MockMvc/webAppContextSetup below, so it never needs a real, listening Tomcat
+// connector. RANDOM_PORT forces Tomcat's NIO selector to open a loopback socket pair,
+// which some sandboxed environments refuse (java.io.IOException: Unable to establish
+// loopback connection), failing every test in this class before it even runs.
+@SpringBootTest
 @ActiveProfiles("test")
 class TriageControllerIntegrationTest {
 
