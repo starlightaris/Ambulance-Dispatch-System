@@ -1,6 +1,6 @@
 package com.ambulance.dispatch_system.triage.util;
 
-import com.ambulance.dispatch_system.triage.entity.TriageAssessment;
+import com.ambulance.dispatch_system.common.entity.TriageAssessment;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 

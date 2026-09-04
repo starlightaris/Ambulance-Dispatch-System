@@ -39,6 +39,7 @@ class GreedySchedulerTest {
         
         when(routeService.findRoute("Node_B", "Node_A")).thenReturn(res1);
         when(routeService.findRoute("Node_C", "Node_A")).thenReturn(res2);
+        when(routeService.loadSnapshot()).thenReturn(routeService::findRoute);
     }
 
     @Test

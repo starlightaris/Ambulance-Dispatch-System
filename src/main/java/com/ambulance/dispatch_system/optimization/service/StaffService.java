@@ -3,12 +3,10 @@ package com.ambulance.dispatch_system.optimization.service;
 import com.ambulance.dispatch_system.common.entity.Staff;
 import com.ambulance.dispatch_system.common.repository.StaffRepository;
 import com.ambulance.dispatch_system.optimization.dto.StaffDto;
+import com.ambulance.dispatch_system.optimization.exception.StaffNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /** Thin CRUD service over Staff - the pool of doctors/drivers the scheduling algorithms draw from. */
 @Service
@@ -40,13 +38,13 @@ public class StaffService {
 
     public void delete(Long id) {
         if (!staffRepository.existsById(id)) {
-            throw new ResponseStatusException(NOT_FOUND, "Staff " + id + " not found");
+            throw new StaffNotFoundException(id);
         }
         staffRepository.deleteById(id);
     }
 
     private Staff getOrThrow(Long id) {
         return staffRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Staff " + id + " not found"));
+                .orElseThrow(() -> new StaffNotFoundException(id));
     }
 }

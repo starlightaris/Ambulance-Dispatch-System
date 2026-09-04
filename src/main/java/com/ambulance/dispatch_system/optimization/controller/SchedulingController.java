@@ -26,7 +26,7 @@ import java.util.List;
  * side by side, and view a previously generated roster.
  */
 @RestController
-@RequestMapping("/api/optimization/schedule")
+@RequestMapping("/api/v1/optimization/schedules")
 public class SchedulingController {
 
     private final SchedulingService schedulingService;
@@ -36,19 +36,19 @@ public class SchedulingController {
     }
 
     /** Runs the Genetic Algorithm and, unless persist=false, saves the resulting roster. */
-    @PostMapping("/run")
+    @PostMapping("/runs")
     public ScheduleRunResponse run(@Valid @RequestBody ScheduleRunRequest request) {
         return schedulingService.run(request);
     }
 
     /** Runs both the GA and the Greedy baseline against the same problem for the evaluation chapter. Never persists. */
-    @PostMapping("/compare")
+    @PostMapping("/comparisons")
     public ScheduleComparisonResponse compare(@Valid @RequestBody ScheduleRunRequest request) {
         return schedulingService.compare(request);
     }
 
     /** Returns the persisted roster for a given week (its Monday date). */
-    @GetMapping("/roster")
+    @GetMapping
     public List<ShiftDto> roster(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStarting) {
         return schedulingService.getRoster(weekStarting);
     }

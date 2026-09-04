@@ -17,6 +17,35 @@ public class DijkstraBlindSpotOptimizer {
             return Collections.emptyList();
         }
 
+        Map<Long, Double> minTravelTimes = computeMinTravelTimes(allNodes, allEdges, baseNodeNames);
+
+        List<RoadNode> blindSpots = new ArrayList<>();
+        for (RoadNode node : allNodes) {
+            if (node == null || node.getId() == null) continue;
+            Double time = minTravelTimes.get(node.getId());
+            if (time == null || time > thresholdMinutes) {
+                blindSpots.add(node);
+            }
+        }
+
+        return blindSpots;
+    }
+
+    /**
+     * The threshold-independent half of blind-spot detection: one multi-source Dijkstra pass
+     * giving the minimum travel time from the nearest base node to every reachable node.
+     * Extracted so a caller that needs to check several thresholds (see
+     * NetworkCoverageStatsService) can run the traversal once and filter the result repeatedly,
+     * instead of paying for a fresh pass - and a fresh database fetch of the whole road network -
+     * per threshold.
+     */
+    public Map<Long, Double> computeMinTravelTimes(List<RoadNode> allNodes,
+                                                     List<RoadEdge> allEdges,
+                                                     Set<String> baseNodeNames) {
+        if (allNodes == null || allNodes.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
         Map<Long, List<RoadEdge>> adjList = new HashMap<>();
         if (allEdges != null) {
             for (RoadEdge edge : allEdges) {
@@ -70,16 +99,7 @@ public class DijkstraBlindSpotOptimizer {
             }
         }
 
-        List<RoadNode> blindSpots = new ArrayList<>();
-        for (RoadNode node : allNodes) {
-            if (node == null || node.getId() == null) continue;
-            Double time = minTravelTimes.get(node.getId());
-            if (time == null || time > thresholdMinutes) {
-                blindSpots.add(node);
-            }
-        }
-
-        return blindSpots;
+        return minTravelTimes;
     }
 
 

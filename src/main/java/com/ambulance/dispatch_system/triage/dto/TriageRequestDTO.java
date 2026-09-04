@@ -1,6 +1,6 @@
-package com.ambulance.dispatch_system.triage.model.dto;
+package com.ambulance.dispatch_system.triage.dto;
 
-import com.ambulance.dispatch_system.triage.model.enums.ConsciousnessLevel;
+import com.ambulance.dispatch_system.common.entity.enums.ConsciousnessLevel;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

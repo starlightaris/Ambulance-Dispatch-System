@@ -1,6 +1,6 @@
-package com.ambulance.dispatch_system.triage.model.dto;
+package com.ambulance.dispatch_system.triage.dto;
 
-import com.ambulance.dispatch_system.triage.model.enums.TriageCategory;
+import com.ambulance.dispatch_system.common.entity.enums.TriageCategory;
 import java.time.LocalDateTime;
 import java.util.UUID;
 

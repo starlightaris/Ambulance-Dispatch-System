@@ -3,12 +3,12 @@ package com.ambulance.dispatch_system.optimization.service;
 import com.ambulance.dispatch_system.common.entity.ShiftSlot;
 import com.ambulance.dispatch_system.common.repository.ShiftSlotRepository;
 import com.ambulance.dispatch_system.optimization.dto.ShiftSlotDto;
+import com.ambulance.dispatch_system.optimization.exception.ShiftSlotNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -51,14 +51,14 @@ class ShiftSlotServiceTest {
     void findByIdThrowsNotFoundWhenMissing() {
         when(shiftSlotRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ResponseStatusException.class, () -> shiftSlotService.findById(99L));
+        assertThrows(ShiftSlotNotFoundException.class, () -> shiftSlotService.findById(99L));
     }
 
     @Test
     void deleteThrowsNotFoundWhenMissingAndNeverCallsDeleteById() {
         when(shiftSlotRepository.existsById(99L)).thenReturn(false);
 
-        assertThrows(ResponseStatusException.class, () -> shiftSlotService.delete(99L));
+        assertThrows(ShiftSlotNotFoundException.class, () -> shiftSlotService.delete(99L));
         verify(shiftSlotRepository, never()).deleteById(any());
     }
 }

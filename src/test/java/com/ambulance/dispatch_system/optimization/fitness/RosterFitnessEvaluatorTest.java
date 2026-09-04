@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * isolates a single penalty component so a broken weight or condition
  * points straight to the offending method.
  */
-class FitnessEvaluatorTest {
+class RosterFitnessEvaluatorTest {
 
     // 2024-01-01 is a Monday - used as a fixed, deterministic scheduling week start.
     private static final LocalDate WEEK_STARTING = LocalDate.of(2024, 1, 1);
@@ -56,7 +56,7 @@ class FitnessEvaluatorTest {
         SchedulingProblem problem = new SchedulingProblem(List.of(morningShift), List.of(alice, bob), WEEK_STARTING);
         RosterChromosome chromosome = new RosterChromosome(new Staff[]{alice});
 
-        FitnessResult result = new FitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
+        FitnessResult result = new RosterFitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
 
         assertEquals(0, result.understaffedViolations());
         assertEquals(0.0, result.overtimeHours());
@@ -74,7 +74,7 @@ class FitnessEvaluatorTest {
         SchedulingProblem problem = new SchedulingProblem(List.of(morningShift), List.of(bob), WEEK_STARTING);
         RosterChromosome chromosome = new RosterChromosome(new Staff[]{bob});
 
-        FitnessResult result = new FitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
+        FitnessResult result = new RosterFitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
 
         assertEquals(1, result.understaffedViolations());
         assertEquals(WEIGHTS.understaffedPenalty(), result.totalPenalty(), 1e-9);
@@ -88,7 +88,7 @@ class FitnessEvaluatorTest {
         SchedulingProblem problem = new SchedulingProblem(List.of(morningShift), List.of(onlyStaff), WEEK_STARTING);
         RosterChromosome chromosome = new RosterChromosome(new Staff[]{null});
 
-        FitnessResult result = new FitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
+        FitnessResult result = new RosterFitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
 
         assertEquals(1, result.understaffedViolations());
     }
@@ -101,7 +101,7 @@ class FitnessEvaluatorTest {
         SchedulingProblem problem = new SchedulingProblem(List.of(longShift), List.of(staff), WEEK_STARTING);
         RosterChromosome chromosome = new RosterChromosome(new Staff[]{staff});
 
-        FitnessResult result = new FitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
+        FitnessResult result = new RosterFitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
 
         assertEquals(2.0, result.overtimeHours(), 1e-9); // 12h worked - 10h max
     }
@@ -115,7 +115,7 @@ class FitnessEvaluatorTest {
         SchedulingProblem problem = new SchedulingProblem(List.of(first, second), List.of(staff), WEEK_STARTING);
         RosterChromosome chromosome = new RosterChromosome(new Staff[]{staff, staff});
 
-        FitnessResult result = new FitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
+        FitnessResult result = new RosterFitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
 
         assertEquals(1, result.restViolations());
     }
@@ -129,7 +129,7 @@ class FitnessEvaluatorTest {
         SchedulingProblem problem = new SchedulingProblem(List.of(first, second), List.of(staff), WEEK_STARTING);
         RosterChromosome chromosome = new RosterChromosome(new Staff[]{staff, staff});
 
-        FitnessResult result = new FitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
+        FitnessResult result = new RosterFitnessEvaluator(WEIGHTS).evaluate(chromosome, problem);
 
         assertEquals(0, result.restViolations());
     }
@@ -146,7 +146,7 @@ class FitnessEvaluatorTest {
         RosterChromosome unevenRoster = new RosterChromosome(new Staff[]{overworked, overworked}); // Alice: 16h, Bob: 0h
         RosterChromosome evenRoster = new RosterChromosome(new Staff[]{overworked, idle}); // Alice: 8h, Bob: 8h
 
-        FitnessEvaluator evaluator = new FitnessEvaluator(WEIGHTS);
+        RosterFitnessEvaluator evaluator = new RosterFitnessEvaluator(WEIGHTS);
         FitnessResult uneven = evaluator.evaluate(unevenRoster, problem);
         FitnessResult even = evaluator.evaluate(evenRoster, problem);
 

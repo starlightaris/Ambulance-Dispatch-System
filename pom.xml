@@ -33,6 +33,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <dependency>
+            <!-- Generates a live OpenAPI contract from the controllers themselves, so it can
+                 never drift the way hand-maintained docs (or a frontend dev's memory of the
+                 endpoints) do. Serves the raw spec at /v3/api-docs and a browsable UI at
+                 /swagger-ui.html - hit either directly against the backend port (8080), no
+                 frontend proxy involved. -->
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.8.5</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

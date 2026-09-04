@@ -22,31 +22,33 @@ public class AStarAlgorithm {
         Map<Long, List<RoadEdge>> graph = buildGraph(edges);
 
         Map<Long, Double> gScore = new HashMap<>();
-        Map<Long, Double> fScore = new HashMap<>();
         Map<Long, RoadNode> previous = new HashMap<>();
 
-        PriorityQueue<RoadNode> openSet =
-                new PriorityQueue<>(
-                        Comparator.comparingDouble(
-                                node -> fScore.getOrDefault(
-                                        node.getId(),
-                                        Double.MAX_VALUE)
-                        )
-                );
+        // Each queue entry snapshots the gScore/fScore it was inserted with.
+        // java.util.PriorityQueue fixes an element's position in the heap
+        // using compare() only at insertion time and never re-sifts it if
+        // the compared value changes afterwards - so relaxing a node that is
+        // already queued must add a fresh entry rather than mutate the old
+        // one's priority in place (that would silently corrupt the heap's
+        // ordering invariant and could make poll() return a non-optimal
+        // node). The stale entry left behind is skipped when polled, the
+        // same lazy-deletion pattern DijkstraBlindSpotOptimizer already uses.
+        PriorityQueue<NodeEntry> openSet =
+                new PriorityQueue<>(Comparator.comparingDouble(NodeEntry::fScore));
 
-        // Starting point = 0 minutes travelled
         gScore.put(start.getId(), 0.0);
 
-        fScore.put(
-                start.getId(),
-                heuristic(start, destination)
-        );
-
-        openSet.add(start);
+        openSet.add(new NodeEntry(start, 0.0, heuristic(start, destination)));
 
         while (!openSet.isEmpty()) {
 
-            RoadNode current = openSet.poll();
+            NodeEntry currentEntry = openSet.poll();
+            RoadNode current = currentEntry.node();
+
+            // A cheaper relaxation superseded this entry after it was queued; skip it.
+            if (currentEntry.gScore() > gScore.getOrDefault(current.getId(), Double.MAX_VALUE)) {
+                continue;
+            }
 
             if (current.getId().equals(destination.getId())) {
                 return reconstructPath(previous, current);
@@ -58,11 +60,8 @@ public class AStarAlgorithm {
 
                 RoadNode neighbour = edge.getToNode();
 
-                // Actual travel time accumulated so far
                 double tentativeGScore =
-                        gScore.getOrDefault(
-                                current.getId(),
-                                Double.MAX_VALUE)
+                        currentEntry.gScore()
                                 + edge.getTravelTimeMinutes();
 
                 if (tentativeGScore <
@@ -79,20 +78,22 @@ public class AStarAlgorithm {
                             tentativeGScore);
 
                     // f(n) = g(n) + h(n)
-                    fScore.put(
-                            neighbour.getId(),
+                    double neighbourFScore =
                             tentativeGScore
                                     + heuristic(
                                             neighbour,
-                                            destination));
+                                            destination);
 
-                    openSet.add(neighbour);
+                    openSet.add(new NodeEntry(neighbour, tentativeGScore, neighbourFScore));
                 }
             }
         }
 
         return Collections.emptyList();
     }
+
+    /** A node queued with the gScore/fScore it had at insertion time, so the heap's priority never mutates in place. */
+    private record NodeEntry(RoadNode node, double gScore, double fScore) {}
 
     private Map<Long, List<RoadEdge>> buildGraph(
             List<RoadEdge> edges) {
@@ -102,7 +103,6 @@ public class AStarAlgorithm {
 
         for (RoadEdge edge : edges) {
 
-            // Ignore blocked roads
             if (edge.isBlocked()) {
                 continue;
             }
@@ -158,7 +158,6 @@ public class AStarAlgorithm {
         // Assume ambulance average speed = 40 km/h
         double averageSpeedKmPerHour = 40.0;
 
-        // Return estimated travel time in minutes
         return (distanceKm / averageSpeedKmPerHour) * 60.0;
     }
 
