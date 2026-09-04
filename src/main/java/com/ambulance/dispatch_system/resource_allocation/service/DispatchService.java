@@ -6,6 +6,10 @@ import com.ambulance.dispatch_system.common.entity.enums.AmbulanceStatus;
 import com.ambulance.dispatch_system.common.entity.enums.CallStatus;
 import com.ambulance.dispatch_system.common.repository.AmbulanceRepository;
 import com.ambulance.dispatch_system.common.repository.CallRepository;
+import com.ambulance.dispatch_system.resource_allocation.dto.AmbulanceDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CallDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.CandidateDto;
+import com.ambulance.dispatch_system.resource_allocation.dto.DispatchResultDto;
 import com.ambulance.dispatch_system.resource_allocation.exception.CallNotFoundException;
 import com.ambulance.dispatch_system.resource_allocation.optimization.GreedyScheduler;
 import org.springframework.stereotype.Service;
@@ -30,7 +34,7 @@ public class DispatchService {
     }
 
     @Transactional
-    public String handleEmergencyDispatch(Long callId) {
+    public DispatchResultDto handleEmergencyDispatch(Long callId) {
         Call call = callRepository.findById(callId)
                 .orElseThrow(() -> new CallNotFoundException(callId));
 
@@ -39,7 +43,7 @@ public class DispatchService {
                 call.getRequiredEquipment());
 
         if (bestAmbulanceOpt.isEmpty()) {
-            return "No suitable ambulance available at this time.";
+            return new DispatchResultDto(false, callId, null, "No suitable ambulance available at this time.");
         }
 
         Ambulance bestAmbulance = bestAmbulanceOpt.get();
@@ -52,14 +56,29 @@ public class DispatchService {
         ambulanceRepository.save(bestAmbulance);
         callRepository.save(call);
 
-        return "Ambulance " + bestAmbulance.getVehicleNumber() + " dispatched successfully.";
+        return new DispatchResultDto(true, callId, bestAmbulance.getVehicleNumber(),
+                "Ambulance " + bestAmbulance.getVehicleNumber() + " dispatched successfully.");
     }
 
-    public List<Call> getPendingCalls() {
-        return callRepository.findByStatus(CallStatus.RECEIVED);
+    /**
+     * Ranks every eligible ambulance for a call exactly as {@link #handleEmergencyDispatch}
+     * would, but without assigning anything - a read-only preview of the greedy scheduler's
+     * decision for a dispatch-board UI.
+     */
+    public List<CandidateDto> getCandidates(Long callId) {
+        Call call = callRepository.findById(callId)
+                .orElseThrow(() -> new CallNotFoundException(callId));
+
+        return greedyScheduler.rankCandidates(call.getLocationNode(), call.getRequiredEquipment()).stream()
+                .map(CandidateDto::fromScored)
+                .toList();
     }
 
-    public List<Ambulance> getAllAmbulances() {
-        return ambulanceRepository.findAll();
+    public List<CallDto> getPendingCalls() {
+        return callRepository.findByStatus(CallStatus.RECEIVED).stream().map(CallDto::fromEntity).toList();
+    }
+
+    public List<AmbulanceDto> getAllAmbulances() {
+        return ambulanceRepository.findAll().stream().map(AmbulanceDto::fromEntity).toList();
     }
 }
